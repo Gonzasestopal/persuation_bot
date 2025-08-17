@@ -1,5 +1,7 @@
 .DEFAULT_GOAL := help
 
+DOCKER_COMPOSE ?= docker compose
+
 ifeq ($(OS),Windows_NT)
 	VENV_PYTHON=.venv\Scripts\python.exe
 	UVICORN=.venv\Scripts\uvicorn.exe
@@ -25,8 +27,11 @@ install:
 	$(VENV_PYTHON) -m pip install --upgrade pip
 	$(VENV_PYTHON) -m pip install -r requirements.txt
 
-run:
+dev:
 	$(UVICORN) app.main:app --reload --port 8000
+
+run:
+	@$(DOCKER_COMPOSE) up --build
 
 test:
 	$(PYTEST) -q
@@ -41,14 +46,13 @@ endif
 
 clean: down
 ifeq ($(OS),Windows_NT)
+	@if exist docker-compose.yml (docker compose down -v) else (echo No docker-compose.yml found)
 	@if exist .venv rmdir /s /q .venv
 	@if exist .pytest_cache rmdir /s /q .pytest_cache
-	@if exist __pycache__ rmdir /s /q __pycache__
-	@$(VENV_PYTHON) -c "import pathlib, shutil; [shutil.rmtree(p) for p in pathlib.Path('.').rglob('__pycache__')]" || ver > nul
+	@for /d /r %%D in (__pycache__) do @if exist "%%D" rmdir /s /q "%%D"
 else
-	@[ -d .venv ] && rm -rf .venv || true
-	@[ -d .pytest_cache ] && rm -rf .pytest_cache || true
-	@[ -d __pycache__ ] && rm -rf __pycache__ || true
-	@$(VENV_PYTHON) -c "import pathlib, shutil; [shutil.rmtree(p) for p in pathlib.Path('.').rglob('__pycache__')]" || true
+	@if [ -f docker-compose.yml ]; then docker compose down -v; else echo "No docker-compose.yml found"; fi
+	@rm -rf .venv .pytest_cache __pycache__ || true
+	@find . -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
 endif
-	@echo "Cleaned up environment."
+	@echo "Removed containers, volumes, and caches."

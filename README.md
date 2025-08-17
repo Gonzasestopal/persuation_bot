@@ -9,6 +9,7 @@ An LLM-based chatbot that takes in messages from a user, processes them, and gen
 5. [API Documentation](#api-documentation)
 6. [Example Requests](#example-requests)
 7. [Non Functional Requirements](#non-functional-requirements)
+8. [Database Indexes](#database-indexes)
 
 ## Overview
 This application challenges you to persuade a chatbot to adopt your point of view while it stands its ground on the initial stance.
@@ -174,3 +175,13 @@ Content-Type: application/json
 **Fault Tolerance**: If timeout triggers, bot responds with a short fallback argument.
 
 **Storage**: Conversations expire after 60 minutes of inactivity in-memory.
+
+## Database Indexes
+
+- **conversations (expires_at)**
+  - Speeds up lookups for active conversations (`expires_at > NOW()`)
+  - Also used in cleanup job to quickly delete expired rows
+
+- **messages (conversation_id, created_at)**
+  - Optimizes retrieval of the last N messages for a conversation
+  - Maintains ordering by creation time

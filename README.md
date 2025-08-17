@@ -1,4 +1,4 @@
-# 🤖 Persuation Bot
+# 🤖 Persuasion Bot
 An LLM-based chatbot that takes in messages from a user, processes them, and generates responses intended to defend itself or maintain its position during an ongoing conversation.
 
 ## 📜 Table of Contents
@@ -6,10 +6,11 @@ An LLM-based chatbot that takes in messages from a user, processes them, and gen
 2. [Architecture](#architecture)
 3. [Entities](#entities)
 4. [Tech Stack](#tech-stack)
-5. [API Documentation](#api-documentation)
-6. [Example Requests](#example-requests)
-7. [Non Functional Requirements](#non-functional-requirements)
-8. [Database Indexes](#database-indexes)
+5. [Getting Started](#getting-started)
+6. [API Documentation](#api-documentation)
+7. [Example Requests](#example-requests)
+8. [Non Functional Requirements](#non-functional-requirements)
+9. [Database Optimization](#database-optimization)
 
 ## Overview
 This application challenges you to persuade a chatbot to adopt your point of view while it stands its ground on the initial stance.
@@ -23,8 +24,8 @@ Includes:
 
 - **Client**: Anyone consuming the API.
 - **API**: REST API built with FastAPI.
-- **Database**: Volatile Inmemory storage for message storage and PSQL for production.
-- **Cache**: Redis Cache to improve Latency and Rate Limiting
+- **Database**: In-memory storage for dev/testing, PostgreSQL for production.
+- **Cache**: Redis Cache to improve latency and enable rate limiting.
 
 ### Caching Strategy
 
@@ -68,9 +69,46 @@ Conversations will be used to link every message based on topic
 
 ## Tech Stack
 - **Backend**: FastAPI (Python 3.11+)
-- **Database**: Dict and postgres for production
+- **Database**: In-memory dict for dev/testing, PostgreSQL for production.
 - **API Docs**: Swagger UI / ReDoc (auto-generated)
 - **Containerization**: Docker
+
+## Getting Started
+
+### Prerequisites
+- Python 3.11+
+- pip
+- GNU Make
+    - On Linux/macOS: preinstalled or install via package manager (sudo apt install make, brew install make)
+
+    - On Windows: install via Chocolatey (choco install make) or MSYS2
+- PostgreSQL (optional)
+
+### Installation
+```bash
+# Clone the repository
+git clone https://github.com/gonzasestopal/persuasion_bot.git
+cd persuasion_bot
+
+# Create a virtual environment & install dependencies
+make install
+```
+
+### Running the service
+```
+make run
+```
+
+### Running tests
+```
+make test
+```
+
+### Cleanup
+```
+make down   # stop Docker services if running (no-op if none exist)
+make clean  # remove venv, caches, __pycache__
+```
 
 ## API Documentation
 
@@ -87,7 +125,7 @@ Authentication:
 
 ## Example Requests
 
-**POST /messages**
+**Start a new conversation**
 ```http
 POST /messages HTTP/1.1
 Host: http://localhost:8000
@@ -117,7 +155,7 @@ Content-Type: application/json
 }
 ```
 
-**POST /messages**
+**Continue an existing conversation**
 ```http
 POST /messages HTTP/1.1
 Host: http://localhost:8000
@@ -158,10 +196,10 @@ Content-Type: application/json
 
 **Error Examples**
 ```
-{ "detail": "message must not be empty." }
-{ "detail": "conversation_id must be null when starting a conversation" }
-{ "detail": "conversation_id not found or expired" }
-{ "detail": "response generation timed out" }
+{ "detail": "message must not be empty." }                          # 422 Unprocessable Entity
+{ "detail": "conversation_id must be null when starting a conversation" }  # 422 Unprocessable Entity
+{ "detail": "conversation_id not found or expired" }                # 404 Not Found
+{ "detail": "response generation timed out" }                       # 502 Bad Gateway
 ```
 
 ## Non Functional Requirements
@@ -176,12 +214,12 @@ Content-Type: application/json
 
 **Storage**: Conversations expire after 60 minutes of inactivity in-memory.
 
-## Database Indexes
+## Database Optimization
 
 - **conversations (expires_at)**
   - Speeds up lookups for active conversations (`expires_at > NOW()`)
-  - Also used in cleanup job to quickly delete expired rows
+  - Used in cleanup job to quickly delete expired rows
 
 - **messages (conversation_id, created_at)**
   - Optimizes retrieval of the last N messages for a conversation
-  - Maintains ordering by creation time
+  - Maintains ordering by creation time for fast sequential reads

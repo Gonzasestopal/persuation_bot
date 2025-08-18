@@ -236,3 +236,39 @@ async def test_continue_conversation_expired(repo):
 
     repo.touch_conversation.assert_not_called()
     repo.add_message.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_start_conversation_calls_llm_and_stores_reply():
+    repo = SimpleNamespace(
+        create_conversation=AsyncMock(return_value=42),
+        get_conversation=AsyncMock(),
+        touch_conversation=AsyncMock(),
+        add_message=AsyncMock(),
+        last_messages=AsyncMock(side_effect=[
+            [{"role": "user", "message": "Topic: X, Side: con"}],
+            [
+                {"role": "user", "message": "Topic: X, Side: con"},
+                {"role": "bot", "message": "Hello from LLM"},
+            ],  # final return
+        ]),
+    )
+
+    parser = Mock(return_value=("X", "con"))
+    llm = AsyncMock()
+    llm.generate.return_value = "Hello from LLM"
+
+    svc = MessageService(parser=parser, repo=repo, llm=llm)
+
+    out = await svc.start_conversation("X", "con", "Topic: X, Side: con")
+
+    llm.generate.assert_awaited_once_with([
+        {"role": "user", "message": "Topic: X, Side: con"},
+    ])
+
+    repo.add_message.assert_has_awaits([
+        call(conversation_id=42, role="user", text="Topic: X, Side: con"),
+        call(conversation_id=42, role="bot", text="Hello from LLM"),
+    ])
+
+    assert out["message"][-1]["message"] == "Hello from LLM"

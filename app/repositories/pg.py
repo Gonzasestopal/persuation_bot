@@ -35,7 +35,7 @@ class PgMessageRepo(MessageRepoInterface):
             await cur.execute(q, (conversation_id, role, text))
 
     async def last_messages(self, conversation_id: int, *, limit: int):
-        q = """SELECT role, message, created_at
+        q = """SELECT role, message
                FROM messages
                WHERE conversation_id = %s
                ORDER BY created_at DESC

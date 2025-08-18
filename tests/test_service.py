@@ -27,11 +27,12 @@ async def test_new_conversation(repo):
     svc.start_conversation = AsyncMock(return_value={"ok": "start"})
     svc.continue_conversation = AsyncMock()
 
-    out = await svc.handle(message="Topic: X, Side: con")
+    txt = "Topic: X, Side: con"
+    out = await svc.handle(message=txt)
 
-    parser.assert_called_once_with("Topic: X, Side: con")
+    parser.assert_called_once_with(txt)
     # Your method signature is positional: (topic, side)
-    svc.start_conversation.assert_awaited_once_with("X", "con")
+    svc.start_conversation.assert_awaited_once_with("X", "con", txt)
     svc.continue_conversation.assert_not_called()
     assert out == {"ok": "start"}
 
@@ -124,7 +125,7 @@ async def test_start_writes_messages_and_returns_window():
     parser = Mock(return_value=("X", "con"))
     svc = MessageService(parser=parser, repo=repo)
 
-    out = await svc.start_conversation(topic="X", side="con")
+    out = await svc.start_conversation(topic="X", side="con", message="Topic: X, Side: con")
 
     repo.create_conversation.assert_awaited_once_with(topic="X", side="con")
     repo.add_message.assert_has_awaits([
@@ -152,9 +153,9 @@ async def test_continue_conversation_writes_and_returns_window(repo):
     repo.touch_conversation.assert_awaited_once_with(conversation_id=123)
     repo.add_message.assert_has_awaits([
         call(conversation_id=123, role="user", text="I firmly believe..."),
-        call(conversation_id=123, role="bot",  text="OK"),
+        call(conversation_id=123, role="bot",  text="bot reply"),
     ])
-    repo.last_messages.assert_awaited_once_with(123, limit=10)  # 5 pairs * 2
+    repo.last_messages.assert_awaited_once_with(conversation_id=123, limit=10)  # 5 pairs * 2
     assert out == {
         "conversation_id": 123,
         "message": [
@@ -179,7 +180,7 @@ async def test_continue_conversation_unknown_id_raises_keyerror():
     with pytest.raises(KeyError):
         await svc.continue_conversation(message="hi", conversation_id=9999)
 
-    repo.get_conversation.assert_awaited_once_with(9999)
+    repo.get_conversation.assert_awaited_once_with(conversation_id=9999)
     repo.touch_conversation.assert_not_called()
     repo.add_message.assert_not_called()
     repo.last_messages.assert_not_called()
@@ -194,7 +195,7 @@ async def test_continue_conversation_respects_history_limit():
         add_message=AsyncMock(),
         last_messages=AsyncMock(return_value=[
             {"role": "user", "message": "hi"},
-            {"role": "bot", "message": "hello"},
+            {"role": "bot", "message": "bot reply"},
         ]),
     )
 
@@ -207,15 +208,15 @@ async def test_continue_conversation_respects_history_limit():
     repo.touch_conversation.assert_awaited_once_with(conversation_id=123)
     repo.add_message.assert_has_awaits([
         call(conversation_id=123, role="user", text="hi"),
-        call(conversation_id=123, role="bot",  text="hello"),
+        call(conversation_id=123, role="bot",  text="bot reply"),
     ])
     # history_limit=2 → 2 * 2 = 4 messages window
-    repo.last_messages.assert_awaited_once_with(123, limit=4)
+    repo.last_messages.assert_awaited_once_with(conversation_id=123, limit=4)
 
     assert out == {
         "conversation_id": 123,
         "message": [
             {"role": "user", "message": "hi"},
-            {"role": "bot", "message": "hello"},
+            {"role": "bot", "message": "bot reply"},
         ],
     }

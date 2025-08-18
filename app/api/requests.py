@@ -3,5 +3,5 @@ from typing import Optional
 
 
 class MessageIn(BaseModel):
-    message: str
+    message: Optional[str] = None
     conversation_id: Optional[int] = None

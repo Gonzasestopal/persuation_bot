@@ -2,8 +2,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.llm.dummy import DummyLLMAdapter
-from app.llm.interface import LLMAdapterInterface
+from app.adapters.llm.dummy import DummyLLMAdapter
+from app.domain.ports.llm import LLMPort
 
 
 @pytest.mark.asyncio
@@ -15,7 +15,7 @@ async def test_llm_interface_can_generate():
 
 @pytest.mark.asyncio
 async def test_llm_adapter_is_mockable():
-    llm = AsyncMock(spec=LLMAdapterInterface)
+    llm = AsyncMock(spec=LLMPort)
     llm.generate.return_value = "bot reply"
 
     reply = await llm.generate([{"role": "user", "message": "Hi"}])

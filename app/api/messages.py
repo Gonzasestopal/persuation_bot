@@ -4,18 +4,17 @@ import asyncio
 from fastapi import APIRouter, Depends
 from starlette.responses import JSONResponse
 
+from app.adapters.llm.dummy import DummyLLMAdapter
 from app.api.requests import MessageIn
 from app.deps import get_repo
 from app.domain.parser import parse_topic_side
-from app.llm.dummy import DummyLLMAdapter
-from app.llm.interface import LLMAdapterInterface
 from app.services.message_service import MessageService
 from app.settings import settings
 
 router = APIRouter()
 
 
-def get_llm() -> LLMAdapterInterface:
+def get_llm() -> DummyLLMAdapter:
     return DummyLLMAdapter()
 
 

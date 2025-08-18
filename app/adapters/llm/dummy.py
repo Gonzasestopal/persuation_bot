@@ -1,9 +1,9 @@
 from typing import Dict, List
 
-from app.llm.interface import LLMAdapterInterface
+from app.domain.ports.llm import LLMPort
 
 
-class DummyLLMAdapter(LLMAdapterInterface):
+class DummyLLMAdapter(LLMPort):
     async def generate(self, messages: List[Dict[str, str]]) -> str:
         if not messages:
             return "..."

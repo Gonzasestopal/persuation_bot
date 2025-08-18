@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from app.domain.parser import assert_no_topic_or_side_markers
-from app.llm.interface import LLMAdapterInterface
+from app.domain.ports.llm import LLMPort
 from app.repositories.base import MessageRepoInterface
 
 
@@ -11,7 +11,7 @@ class MessageService(object):
             self,
             parser,
             repo: MessageRepoInterface,
-            llm: LLMAdapterInterface,
+            llm: LLMPort,
             history_limit=5,
         ):
         self.parser = parser

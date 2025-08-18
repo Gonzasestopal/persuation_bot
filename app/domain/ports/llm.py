@@ -2,7 +2,7 @@ import abc
 from typing import Dict, List
 
 
-class LLMAdapterInterface(abc.ABC):
+class LLMPort(abc.ABC):
     @abc.abstractmethod
     async def generate(self, messages: List[Dict[str, str]]) -> str:
         """

@@ -6,32 +6,38 @@ ifeq ($(OS),Windows_NT)
 	VENV_PYTHON=.venv\Scripts\python.exe
 	UVICORN=.venv\Scripts\uvicorn.exe
 	PYTEST=.venv\Scripts\pytest.exe
+	YOYO=.venv\Scripts\yoyo.exe
 else
 	VENV_PYTHON=.venv/bin/python
 	UVICORN=.venv/bin/uvicorn
 	PYTEST=.venv/bin/pytest
+	YOYO=.venv/bin/yoyo
 endif
 
-.PHONY: help install run test down clean
+.PHONY: help install run test down clean dev migrate
 
 help:
 	@echo "Available commands:"
 	@echo "  make install   - Create venv and install dependencies"
-	@echo "  make run       - Run the FastAPI service with uvicorn"
+	@echo "  make run       - Start services with Docker Compose"
 	@echo "  make test      - Run tests with pytest"
 	@echo "  make down      - Stop all running Docker services"
 	@echo "  make clean     - Remove venv, containers, caches"
+	@echo "  make dev       - Run the FastAPI service in development mode"
 
 install:
 	python -m venv .venv
 	$(VENV_PYTHON) -m pip install --upgrade pip
 	$(VENV_PYTHON) -m pip install -r requirements.txt
 
-dev:
-	$(UVICORN) app.main:app --reload --port 8000
+migrate:
+	$(YOYO) apply --batch ./migrations
 
 run:
 	@$(DOCKER_COMPOSE) up --build
+
+dev:
+	$(UVICORN) app.main:app --reload --port 8000
 
 test:
 	$(PYTEST) -q

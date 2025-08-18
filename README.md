@@ -11,6 +11,7 @@ An LLM-based chatbot that takes in messages from a user, processes them, and gen
 7. [Example Requests](#example-requests)
 8. [Non Functional Requirements](#non-functional-requirements)
 9. [Database Optimization](#database-optimization)
+10. [Production Considerations](#produciton-considerations)
 
 ## Overview
 This application challenges you to persuade a chatbot to adopt your point of view while it stands its ground on the initial stance.
@@ -24,7 +25,7 @@ Includes:
 
 - **Client**: Anyone consuming the API.
 - **API**: REST API built with FastAPI.
-- **Database**: In-memory storage for dev/testing, PostgreSQL for production.
+- **Database**: ~~In-memory storage for dev/testing~~, PostgreSQL.
 - **Cache**: Redis Cache to improve latency and enable rate limiting.
 
 ### Caching Strategy
@@ -68,30 +69,36 @@ Conversations will be used to link every message based on topic
 - ```timestamps```
 
 ## Tech Stack
-- **Backend**: FastAPI (Python 3.11+)
-- **Database**: In-memory dict for dev/testing, PostgreSQL for production.
+- **Backend**: FastAPI (Python 3.9+)
+- **Database**: ~~In-memory dict for dev/testing~~, PostgreSQL.
 - **API Docs**: Swagger UI / ReDoc (auto-generated)
 - **Containerization**: Docker
 
 ## Getting Started
 
-### Prerequisites
-- Python 3.11+
-- pip
-- GNU Make
+### Prerequisites (Docker-first)
+- Docker (required)
+    - Follow Docker installation [instructions](https://docs.docker.com/engine/install/)
+- GNU Make (required)
     - On Linux/macOS: preinstalled or install via package manager (sudo apt install make, brew install make)
 
     - On Windows: install via Chocolatey (choco install make) or MSYS2
-- PostgreSQL (optional)
+- Python & pip (optional, for local-only dev/tests)
+- PostgreSQL (optional, for local-only dev)
 
-### Installation
+### Clone Repository
 ```bash
-# Clone the repository
 git clone https://github.com/gonzasestopal/persuasion_bot.git
 cd persuasion_bot
+```
 
-# Create a virtual environment & install dependencies
-make install
+### Environment
+Copy .env.example to .env and adjust if needed:
+```
+POSTGRES_USER=app
+POSTGRES_PASSWORD=app
+POSTGRES_DB=app
+DATABASE_URL=postgresql://app:app@db:5432/app
 ```
 
 ### Running the service
@@ -212,7 +219,7 @@ Content-Type: application/json
 
 **Fault Tolerance**: If timeout triggers, bot responds with a short fallback argument.
 
-**Storage**: Conversations expire after 60 minutes of inactivity in-memory.
+**Storage**: Conversations expire after 60 minutes of inactivity.
 
 ## Database Optimization
 
@@ -223,3 +230,7 @@ Content-Type: application/json
 - **messages (conversation_id, created_at)**
   - Optimizes retrieval of the last N messages for a conversation
   - Maintains ordering by creation time for fast sequential reads
+
+## Production Considerations
+
+For simplicity, expired conversations will not be physically deleted from the database in this implementation. In a production system, you would typically run a periodic cleanup job to purge expired rows.

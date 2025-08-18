@@ -132,6 +132,10 @@ Authentication:
 
 ## Example Requests
 
+>  [!IMPORTANT]
+>  Make sure the starting message contains topic and side (PRO, CON) in any order.<br>
+>  Topic: Dogs are humans best friend Side: pro
+
 **Start a new conversation**
 ```http
 POST /messages HTTP/1.1
@@ -203,10 +207,11 @@ Content-Type: application/json
 
 **Error Examples**
 ```
-{ "detail": "message must not be empty." }                          # 422 Unprocessable Entity
-{ "detail": "conversation_id must be null when starting a conversation" }  # 422 Unprocessable Entity
-{ "detail": "conversation_id not found or expired" }                # 404 Not Found
-{ "detail": "response generation timed out" }                       # 503 Bad Gateway
+{ "detail": "message must not be empty." }                                       # 422 Unprocessable Entity
+{ "detail": "message must contain topic and side for starting a conversation." } # 422 Unprocessable Entity
+{ "detail": "conversation_id must be null when starting a conversation" }        # 422 Unprocessable Entity
+{ "detail": "conversation_id not found or expired" }                             # 404 Not Found
+{ "detail": "response generation timed out" }                                    # 503 Bad Gateway
 ```
 
 ## Non Functional Requirements

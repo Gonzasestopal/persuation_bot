@@ -18,25 +18,25 @@ def test_parser_unsupported_side():
         parse_topic_side("Topic: Dogs are great, Side: maybe")
 
 def test_parser_valid_side_and_topic_mixed_case():
-    topic = "Dogs are the best friend of the human"
+    topic = "Dogs are humans best friend"
     t, s = parse_topic_side(f"Topic: {topic} , Side: Pro")
     assert t == topic
     assert s == "pro"
 
 def test_parser_uppercase_input():
-    topic = "DOGS ARE THE BEST FRIEND OF THE HUMAN"
+    topic = "DOGS ARE HUMANS BEST FRIENDS"
     t, s = parse_topic_side(f"TOPIC: {topic}, SIDE: PRO")
     assert t == topic
     assert s == "pro"
 
 def test_parser_lowercase_input():
-    topic = "dogs are the best friend of the human"
+    topic = "dogs are human best friends"
     t, s = parse_topic_side(f"topic: {topic}, side: pro")
     assert t == topic
     assert s == "pro"
 
 def test_parser_reversed_order_and_punctuation():
-    topic = "Dogs are the best friend of the human"
+    topic = "Dogs are human best friends"
     t, s = parse_topic_side(f"Side: CON. Topic: {topic}")
     assert t == topic
     assert s == "con"

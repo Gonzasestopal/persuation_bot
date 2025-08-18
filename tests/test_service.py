@@ -10,7 +10,7 @@ from app.services.message_service import MessageService
 def repo():
     return SimpleNamespace(
         create_conversation=AsyncMock(return_value=42),  # not used here
-        get_conversation=AsyncMock(return_value={"id": 123, "topic": "X", "side": "con"}),
+        get_conversation=AsyncMock(return_value={"conversation_id": 123, "topic": "X", "side": "con"}),
         touch_conversation=AsyncMock(),
         add_message=AsyncMock(),
         last_messages=AsyncMock(return_value=[
@@ -190,7 +190,7 @@ async def test_continue_conversation_unknown_id_raises_keyerror():
 async def test_continue_conversation_respects_history_limit():
     repo = SimpleNamespace(
         create_conversation=AsyncMock(),
-        get_conversation=AsyncMock(return_value={"id": 123, "topic": "X", "side": "con"}),
+        get_conversation=AsyncMock(return_value={"conversation_id": 123, "topic": "X", "side": "con"}),
         touch_conversation=AsyncMock(),
         add_message=AsyncMock(),
         last_messages=AsyncMock(return_value=[

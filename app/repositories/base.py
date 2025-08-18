@@ -1,18 +1,12 @@
-from typing import Dict, List, Optional, Protocol
+from fastapi import Request
+from psycopg_pool import AsyncConnectionPool
+
+from app.adapters.repositories.pg import PgMessageRepo
 
 
-class MessageRepoInterface(Protocol):
-    async def create_conversation(self, *, topic: str, side: str) -> int:
-        raise NotImplementedError
+def get_pool(request: Request) -> AsyncConnectionPool:
+    return request.app.state.dbpool
 
-    async def get_conversation(self, conversation_id: int) -> Optional[Dict]:
-        raise NotImplementedError
 
-    async def touch_conversation(self, conversation_id: int) -> None:
-        raise NotImplementedError
-
-    async def add_message(self, conversation_id: int, *, role: str, text: str) -> None:
-        raise NotImplementedError
-
-    async def last_messages(self, conversation_id: int, *, limit: int) -> List[Dict]:
-        raise NotImplementedError
+def get_repo(request: Request) -> PgMessageRepo:
+    return PgMessageRepo(pool=request.app.state.dbpool)

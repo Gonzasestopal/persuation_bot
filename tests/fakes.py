@@ -1,10 +1,10 @@
 import datetime as dt
 from typing import Dict, List, Optional
 
-from app.repositories.base import MessageRepoInterface
+from app.domain.ports.message_repo import MessageRepoPort
 
 
-class InMemoryRepo(MessageRepoInterface):
+class InMemoryRepo(MessageRepoPort):
     def __init__(self):
         self._cid = 0
         self._mid = 0

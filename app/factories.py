@@ -1,8 +1,8 @@
 from fastapi import Depends
 
 from app.adapters.llm.dummy import DummyLLMAdapter
-from app.deps import get_repo
 from app.domain.parser import parse_topic_side
+from app.repositories.base import get_repo
 from app.services.message_service import MessageService
 
 

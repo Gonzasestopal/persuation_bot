@@ -1,10 +1,10 @@
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
-from app.repositories.base import MessageRepoInterface
+from app.domain.ports.message_repo import MessageRepoPort
 
 
-class PgMessageRepo(MessageRepoInterface):
+class PgMessageRepo(MessageRepoPort):
     def __init__(self, pool: AsyncConnectionPool):
         self.pool = pool
 

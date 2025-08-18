@@ -3,14 +3,14 @@ from typing import Optional
 
 from app.domain.parser import assert_no_topic_or_side_markers
 from app.domain.ports.llm import LLMPort
-from app.repositories.base import MessageRepoInterface
+from app.domain.ports.message_repo import MessageRepoPort
 
 
 class MessageService(object):
     def __init__(
             self,
             parser,
-            repo: MessageRepoInterface,
+            repo: MessageRepoPort,
             llm: LLMPort,
             history_limit=5,
         ):

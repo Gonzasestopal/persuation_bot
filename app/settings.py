@@ -1,6 +1,8 @@
+from typing import AnyStr
+
 from pydantic import AnyUrl
 from pydantic_settings import BaseSettings
-from typing import AnyStr
+
 
 class Settings(BaseSettings):
     DATABASE_URL: AnyUrl
@@ -10,8 +12,11 @@ class Settings(BaseSettings):
     POSTGRES_USER: AnyStr
     POSTGRES_DB: AnyStr
     POSTGRES_PASSWORD: AnyStr
+    POOL_MIN: int = 1
+    POOL_MAX: int = 10
 
     class Config:
         env_file = ".env"
+
 
 settings = Settings()

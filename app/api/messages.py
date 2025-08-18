@@ -2,16 +2,19 @@
 import asyncio
 
 from fastapi import APIRouter, Depends
-from app.api.requests import MessageIn
-from app.services.message_service import MessageService
-from app.settings import settings
 from starlette.responses import JSONResponse
 
+from app.api.requests import MessageIn
+from app.domain.parser import parse_topic_side
+from app.services.message_service import MessageService
+from app.settings import settings
 
 router = APIRouter()
 
+
 def get_service() -> MessageService:
-    return MessageService()
+    return MessageService(parser=parse_topic_side)
+
 
 @router.post("/messages", status_code=201)
 async def start_conversation(message: MessageIn, service=Depends(get_service)):

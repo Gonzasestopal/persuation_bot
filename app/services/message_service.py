@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Optional
 
 from app.domain.parser import assert_no_topic_or_side_markers
@@ -35,7 +36,10 @@ class MessageService(object):
         conversation = await self.repo.get_conversation(conversation_id=conversation_id)
 
         if not conversation:
-            raise KeyError("conversation_id not found or expired")
+            raise KeyError("conversation_id not found")
+
+        if conversation['expires_at'] <= datetime.now(timezone.utc):
+            raise KeyError("conversation_id expired")
 
         cid = conversation["conversation_id"]
         await self.repo.touch_conversation(conversation_id=cid)

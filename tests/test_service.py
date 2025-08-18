@@ -227,7 +227,7 @@ async def test_continue_conversation_respects_history_limit():
 @pytest.mark.asyncio
 async def test_continue_conversation_expired(repo):
     expired_time = datetime.now(timezone.utc) - timedelta(minutes=1)
-    repo.get_conversation.return_value = {"conversation_id": 123, "expired_at": expired_time}
+    repo.get_conversation.return_value = {"conversation_id": 123, "expires_at": expired_time}
 
     svc = MessageService(parser=Mock(), repo=repo)
 

@@ -22,10 +22,17 @@ def repo():
     )
 
 
+@pytest.fixture
+def llm():
+    return SimpleNamespace(
+        generate=AsyncMock(return_value='bot reply')
+    )
+
+
 @pytest.mark.asyncio
-async def test_new_conversation(repo):
+async def test_new_conversation(repo, llm):
     parser = Mock(return_value=("X", "con"))
-    svc = MessageService(parser=parser, repo=repo)
+    svc = MessageService(parser=parser, repo=repo, llm=llm)
     svc.start_conversation = AsyncMock(return_value={"ok": "start"})
     svc.continue_conversation = AsyncMock()
 
@@ -40,10 +47,10 @@ async def test_new_conversation(repo):
 
 
 @pytest.mark.asyncio
-async def test_continue_conversation(repo):
+async def test_continue_conversation(repo, llm):
     parser = Mock(side_effect=AssertionError("parser must not be called on continue"))
 
-    svc = MessageService(parser=parser, repo=repo)
+    svc = MessageService(parser=parser, repo=repo, llm=llm)
     svc.start_conversation = AsyncMock()
     svc.continue_conversation = AsyncMock(return_value={"ok": "continue"})
 
@@ -56,10 +63,10 @@ async def test_continue_conversation(repo):
 
 
 @pytest.mark.asyncio
-async def test_new_conversation_invalid_message(repo):
+async def test_new_conversation_invalid_message(repo, llm):
     parser = Mock()
     parser.side_effect = ValueError("message must contain Topic: and Side: fields")
-    service = MessageService(parser=parser, repo=repo)
+    service = MessageService(parser=parser, repo=repo, llm=llm)
     service.start_conversation = AsyncMock()
     with pytest.raises(ValueError, match="message must contain Topic: and Side: fields"):
         await service.handle(message="Message missing params")
@@ -68,9 +75,9 @@ async def test_new_conversation_invalid_message(repo):
 
 
 @pytest.mark.asyncio
-async def test_continue_conversation_new_topic_or_side(repo):
+async def test_continue_conversation_new_topic_or_side(repo, llm):
     parser = Mock()
-    service = MessageService(parser=parser, repo=repo)
+    service = MessageService(parser=parser, repo=repo, llm=llm)
     service.continue_conversation = AsyncMock()
     with pytest.raises(ValueError, match="topic/side must not be provided when continuing a conversation"):
         await service.handle(message="Topic: X, Side: PRO", conversation_id=123)
@@ -79,40 +86,40 @@ async def test_continue_conversation_new_topic_or_side(repo):
 
 
 @pytest.mark.asyncio
-async def test_continue_rejects_topic_marker(repo):
+async def test_continue_rejects_topic_marker(repo, llm):
     parser = Mock()
-    service = MessageService(parser=parser, repo=repo)
+    service = MessageService(parser=parser, repo=repo, llm=llm)
     with pytest.raises(ValueError, match="must not be provided"):
         await service.handle(message="Topic: Cats. anyway...", conversation_id=1)
 
 
 @pytest.mark.asyncio
-async def test_continue_rejects_side_marker(repo):
+async def test_continue_rejects_side_marker(repo, llm):
     parser = Mock()
-    service = MessageService(parser=parser, repo=repo)
+    service = MessageService(parser=parser, repo=repo, llm=llm)
     with pytest.raises(ValueError, match="must not be provided"):
         await service.handle(message="Side: PRO. I think...", conversation_id=1)
 
 
 @pytest.mark.asyncio
-async def test_continue_allows_normal_text_and_no_parser(repo):
+async def test_continue_allows_normal_text_and_no_parser(repo, llm):
     parser = Mock(side_effect=AssertionError("parser must not be called"))
-    service = MessageService(parser=parser, repo=repo)
+    service = MessageService(parser=parser, repo=repo, llm=llm)
     service.continue_conversation = AsyncMock()
     await service.handle(message="We worked alongside: our peers", conversation_id=7)
     service.continue_conversation.assert_called()
 
 
 @pytest.mark.asyncio
-async def test_continue_with_empty_message(repo):
+async def test_continue_with_empty_message(repo, llm):
     parser = Mock(side_effect=AssertionError("parser must not be called"))
-    service = MessageService(parser=parser, repo=repo)
+    service = MessageService(parser=parser, repo=repo, llm=llm)
     with pytest.raises(ValueError, match="must not be empty"):
         await service.handle(message="", conversation_id=7)
 
 
 @pytest.mark.asyncio
-async def test_start_writes_messages_and_returns_window():
+async def test_start_writes_messages_and_returns_window(llm):
     repo = SimpleNamespace(
         create_conversation=AsyncMock(return_value=42),
         get_conversation=AsyncMock(),
@@ -125,7 +132,7 @@ async def test_start_writes_messages_and_returns_window():
     )
 
     parser = Mock(return_value=("X", "con"))
-    svc = MessageService(parser=parser, repo=repo)
+    svc = MessageService(parser=parser, repo=repo, llm=llm)
 
     out = await svc.start_conversation(topic="X", side="con", message="Topic: X, Side: con")
 
@@ -134,7 +141,10 @@ async def test_start_writes_messages_and_returns_window():
         call(conversation_id=42, role="user", text="Topic: X, Side: con"),
         call(conversation_id=42, role="bot",  text="bot reply"),
     ])
-    repo.last_messages.assert_awaited_once_with(conversation_id=42, limit=10)
+    repo.last_messages.assert_has_awaits([
+        call(conversation_id=42, limit=10),  # history for LLM
+        call(conversation_id=42, limit=10),  # final return
+    ])
     assert out == {
         "conversation_id": 42,
         "message": [
@@ -145,9 +155,9 @@ async def test_start_writes_messages_and_returns_window():
 
 
 @pytest.mark.asyncio
-async def test_continue_conversation_writes_and_returns_window(repo):
+async def test_continue_conversation_writes_and_returns_window(repo, llm):
     parser = Mock(side_effect=AssertionError("parser must not be called on continue"))
-    svc = MessageService(parser=parser, repo=repo, history_limit=5)
+    svc = MessageService(parser=parser, repo=repo, llm=llm, history_limit=5)
 
     out = await svc.continue_conversation(message="I firmly believe...", conversation_id=123)
 
@@ -157,7 +167,10 @@ async def test_continue_conversation_writes_and_returns_window(repo):
         call(conversation_id=123, role="user", text="I firmly believe..."),
         call(conversation_id=123, role="bot",  text="bot reply"),
     ])
-    repo.last_messages.assert_awaited_once_with(conversation_id=123, limit=10)  # 5 pairs * 2
+    repo.last_messages.assert_has_awaits([
+        call(conversation_id=123, limit=10),  # history for LLM
+        call(conversation_id=123, limit=10),  # final return
+    ])
     assert out == {
         "conversation_id": 123,
         "message": [
@@ -168,7 +181,7 @@ async def test_continue_conversation_writes_and_returns_window(repo):
 
 
 @pytest.mark.asyncio
-async def test_continue_conversation_unknown_id_raises_keyerror():
+async def test_continue_conversation_unknown_id_raises_keyerror(llm):
     repo = SimpleNamespace(
         create_conversation=AsyncMock(),
         get_conversation=AsyncMock(return_value=None),  # not found / expired
@@ -177,7 +190,7 @@ async def test_continue_conversation_unknown_id_raises_keyerror():
         last_messages=AsyncMock(),
     )
     parser = Mock()
-    svc = MessageService(parser=parser, repo=repo)
+    svc = MessageService(parser=parser, repo=repo, llm=llm)
 
     with pytest.raises(KeyError):
         await svc.continue_conversation(message="hi", conversation_id=9999)
@@ -189,7 +202,7 @@ async def test_continue_conversation_unknown_id_raises_keyerror():
 
 
 @pytest.mark.asyncio
-async def test_continue_conversation_respects_history_limit():
+async def test_continue_conversation_respects_history_limit(llm):
     expired_time = datetime.now(timezone.utc) + timedelta(minutes=60)
     repo = SimpleNamespace(
         create_conversation=AsyncMock(),
@@ -203,7 +216,7 @@ async def test_continue_conversation_respects_history_limit():
     )
 
     parser = Mock(side_effect=AssertionError("parser must not be called"))
-    svc = MessageService(parser=parser, repo=repo, history_limit=2)
+    svc = MessageService(parser=parser, repo=repo, llm=llm, history_limit=2)
 
     out = await svc.continue_conversation(message="hi", conversation_id=123)
 
@@ -214,8 +227,10 @@ async def test_continue_conversation_respects_history_limit():
         call(conversation_id=123, role="bot",  text="bot reply"),
     ])
     # history_limit=2 → 2 * 2 = 4 messages window
-    repo.last_messages.assert_awaited_once_with(conversation_id=123, limit=4)
-
+    repo.last_messages.assert_has_awaits([
+        call(conversation_id=123, limit=4),  # history for LLM
+        call(conversation_id=123, limit=4),  # final return
+    ])
     assert out == {
         "conversation_id": 123,
         "message": [
@@ -225,11 +240,11 @@ async def test_continue_conversation_respects_history_limit():
     }
 
 @pytest.mark.asyncio
-async def test_continue_conversation_expired(repo):
+async def test_continue_conversation_expired(repo, llm):
     expired_time = datetime.now(timezone.utc) - timedelta(minutes=1)
     repo.get_conversation.return_value = {"conversation_id": 123, "expires_at": expired_time}
 
-    svc = MessageService(parser=Mock(), repo=repo)
+    svc = MessageService(parser=Mock(), repo=repo, llm=llm)
 
     with pytest.raises(KeyError, match="expired"):
         await svc.continue_conversation("hello", 123)

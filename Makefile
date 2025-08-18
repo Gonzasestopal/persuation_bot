@@ -40,7 +40,7 @@ dev:
 	$(UVICORN) app.main:app --reload --port 8000
 
 test:
-	$(PYTEST) -q
+	python -m pytest -q
 
 down:
 ifeq ($(OS),Windows_NT)

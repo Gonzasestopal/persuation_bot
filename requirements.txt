@@ -3,3 +3,5 @@ uvicorn[standard]
 pytest
 yoyo-database-migrations
 psycopg2-binary
+httpx
+pydantic-settings

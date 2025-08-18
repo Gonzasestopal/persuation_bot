@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, call
 
@@ -8,9 +9,10 @@ from app.services.message_service import MessageService
 
 @pytest.fixture
 def repo():
+    expired_time = datetime.now(timezone.utc) + timedelta(minutes=60)
     return SimpleNamespace(
         create_conversation=AsyncMock(return_value=42),  # not used here
-        get_conversation=AsyncMock(return_value={"conversation_id": 123, "topic": "X", "side": "con"}),
+        get_conversation=AsyncMock(return_value={"conversation_id": 123, "topic": "X", "side": "con", "expires_at": expired_time}),
         touch_conversation=AsyncMock(),
         add_message=AsyncMock(),
         last_messages=AsyncMock(return_value=[
@@ -188,9 +190,10 @@ async def test_continue_conversation_unknown_id_raises_keyerror():
 
 @pytest.mark.asyncio
 async def test_continue_conversation_respects_history_limit():
+    expired_time = datetime.now(timezone.utc) + timedelta(minutes=60)
     repo = SimpleNamespace(
         create_conversation=AsyncMock(),
-        get_conversation=AsyncMock(return_value={"conversation_id": 123, "topic": "X", "side": "con"}),
+        get_conversation=AsyncMock(return_value={"conversation_id": 123, "topic": "X", "side": "con", "expires_at": expired_time}),
         touch_conversation=AsyncMock(),
         add_message=AsyncMock(),
         last_messages=AsyncMock(return_value=[
@@ -220,3 +223,16 @@ async def test_continue_conversation_respects_history_limit():
             {"role": "bot", "message": "bot reply"},
         ],
     }
+
+@pytest.mark.asyncio
+async def test_continue_conversation_expired(repo):
+    expired_time = datetime.now(timezone.utc) - timedelta(minutes=1)
+    repo.get_conversation.return_value = {"conversation_id": 123, "expired_at": expired_time}
+
+    svc = MessageService(parser=Mock(), repo=repo)
+
+    with pytest.raises(KeyError, match="expired"):
+        await svc.continue_conversation("hello", 123)
+
+    repo.touch_conversation.assert_not_called()
+    repo.add_message.assert_not_called()

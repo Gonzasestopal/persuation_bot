@@ -2,18 +2,13 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from app.llm.dummy import DummyLLMAdapter
 from app.llm.interface import LLMAdapterInterface
-
-
-class DummyLLM(LLMAdapterInterface):
-    async def generate(self, messages):
-        # simple echo for testing
-        return "bot reply"
 
 
 @pytest.mark.asyncio
 async def test_llm_interface_can_generate():
-    llm = DummyLLM()
+    llm = DummyLLMAdapter()
     reply = await llm.generate([{"role": "user", "message": "Hello"}])
     assert reply == "bot reply"
 

@@ -34,7 +34,6 @@ class MessageService(object):
 
         reply = await self.llm.generate(conversation=conversation)
 
-        # store LLM reply
         await self.repo.add_message(conversation_id=conversation.id, role="bot", text=reply)
 
         return {
@@ -56,7 +55,7 @@ class MessageService(object):
         await self.repo.add_message(conversation_id=cid, role="user", text=message)
 
         history = await self.repo.last_messages(conversation_id=cid, limit=self.history_limit * 2)
-        reply = await self.llm.generate(history)
+        reply = await self.llm.debate(history)
         await self.repo.add_message(conversation_id=cid, role="bot", text=reply)
 
         return {

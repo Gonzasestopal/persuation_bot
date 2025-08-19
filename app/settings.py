@@ -1,7 +1,9 @@
-from typing import AnyStr
+from typing import AnyStr, Optional
 
-from pydantic import AnyUrl
+from pydantic import AnyUrl, field_validator
 from pydantic_settings import BaseSettings
+
+from app.adapters.llm.constants import OpenAIModels, Provider
 
 
 class Settings(BaseSettings):
@@ -15,10 +17,17 @@ class Settings(BaseSettings):
     POOL_MIN: int = 1
     POOL_MAX: int = 10
     OPENAI_API_KEY: str
-    LLM_PROVIDER: str = 'openai'
+    LLM_PROVIDER: Optional[Provider] = Provider.OPENAI
+    LLM_MODEL: str = OpenAIModels.GPT_4O
 
     class Config:
         env_file = ".env"
+
+    @field_validator("LLM_PROVIDER", mode="before")
+    def allow_blank(cls, v):
+        if v == "" or v is None:
+            return None
+        return v
 
 
 settings = Settings()

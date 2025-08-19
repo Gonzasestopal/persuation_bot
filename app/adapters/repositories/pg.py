@@ -41,13 +41,13 @@ class PgMessageRepo(MessageRepoPort):
         q = """
         SELECT role, message, created_at
         FROM (
-            SELECT role, message, created_at, id
+            SELECT role, message, created_at, message_id
             FROM messages
             WHERE conversation_id = %s
-            ORDER BY created_at DESC, id DESC
+            ORDER BY created_at DESC, message_id DESC
             LIMIT %s
         ) sub
-        ORDER BY created_at ASC, id ASC
+        ORDER BY created_at ASC
         """
         async with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(q, (conversation_id, limit))

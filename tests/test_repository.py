@@ -77,3 +77,24 @@ async def test_last_messages_window_slides_on_new_message(repo):
 
     t2 = [m["created_at"] for m in out2]
     assert t2 == sorted(t2)
+
+
+@pytest.mark.asyncio
+async def test_user_bot_order_preserved_with_same_timestamp(repo):
+    cid = await repo.create_conversation(topic="T", side="pro")
+    ts = dt.datetime(2025, 1, 1, tzinfo=dt.timezone.utc)
+
+    # Same timestamp, but inserted user then bot repeatedly
+    await repo.add_message(cid, role="user", text="u0", created_at=ts)
+    await repo.add_message(cid, role="bot",  text="b0", created_at=ts)
+    await repo.add_message(cid, role="user", text="u1", created_at=ts)
+    await repo.add_message(cid, role="bot",  text="b1", created_at=ts)
+    await repo.add_message(cid, role="user", text="u2", created_at=ts)
+    await repo.add_message(cid, role="bot",  text="b2", created_at=ts)
+
+    out = await repo.last_messages(cid, limit=6)
+    assert [(m["role"], m["message"]) for m in out] == [
+        ("user", "u0"), ("bot", "b0"),
+        ("user", "u1"), ("bot", "b1"),
+        ("user", "u2"), ("bot", "b2"),
+    ]

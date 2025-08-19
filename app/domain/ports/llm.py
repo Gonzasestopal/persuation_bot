@@ -1,6 +1,7 @@
 import abc
+from typing import List
 
-from app.domain.models import Conversation
+from app.domain.models import Conversation, Message
 
 
 class LLMPort(abc.ABC):
@@ -8,6 +9,14 @@ class LLMPort(abc.ABC):
     async def generate(self, conversation: Conversation) -> str:
         """
         Given a conversation topic and side,
+        return the assistant's reply as plain text.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def debate(self, messages: List[Message]) -> str:
+        """
+        Given a conversation history (list of Messages),
         return the assistant's reply as plain text.
         """
         raise NotImplementedError

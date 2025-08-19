@@ -8,12 +8,14 @@ class InMemoryRepo(MessageRepoPort):
     def __init__(self):
         self._cid = 0
         self._mid = 0
+        self._seq: dict[int, int] = {}  # per-conversation monotonic sequence
         self.conversations: dict[int, dict] = {}
         self.messages: List[Dict] = []
 
     async def create_conversation(self, *, topic: str, side: str) -> int:
         self._cid += 1
         cid = self._cid
+        self._seq[cid] = 0
         self.conversations[cid] = {
             "conversation_id": cid,
             "topic": topic,
@@ -31,14 +33,23 @@ class InMemoryRepo(MessageRepoPort):
         base = max(c["expires_at"], now)
         c["expires_at"] = base + dt.timedelta(minutes=60)
 
-    async def add_message(self, conversation_id: int, *, role: str, text: str) -> None:
+    async def add_message(
+        self,
+        conversation_id: int,
+        *,
+        role: str,
+        text: str,
+        created_at: Optional[dt.datetime] = None,
+    ) -> None:
         self._mid += 1
+        self._seq[conversation_id] += 1
         self.messages.append({
             "message_id": self._mid,
             "conversation_id": conversation_id,
+            "seq": self._seq[conversation_id],
             "role": role,
             "message": text,
-            "created_at": dt.datetime.now(dt.timezone.utc),
+            "created_at": created_at or dt.datetime.now(dt.timezone.utc),
         })
 
     async def last_messages(self, conversation_id: int, *, limit: int) -> List[Dict]:

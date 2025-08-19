@@ -220,7 +220,13 @@ Content-Type: application/json
 
 **Scalability**: Caching layers reduce duplicate LLM calls and DB load.
 
-**History Window**: Only the last 5 user+bot pairs are returned in responses.
+**History Window**: Only the last 5 user+bot pairs are returned in responses, taking in consideration the following approaches:
+
+- A) Soft-delete (mark older rows as deleted)
+
+- B) Don’t delete; select “latest N” with a subquery (and reorder ascending)
+
+For this implementation I went with the subquery approach because it’s simpler and keeps the write path lightweight. A soft-delete strategy would allow undelete/auditability, but it also incurs extra overhead by updating indexes
 
 **Fault Tolerance**: If timeout triggers, bot responds with a short fallback argument.
 
@@ -235,6 +241,10 @@ Content-Type: application/json
 - **messages (conversation_id, created_at)**
   - Optimizes retrieval of the last N messages for a conversation
   - Maintains ordering by creation time for fast sequential reads
+
+- **messages (conversation_id, created_at DESC, id DESC)**
+  - Optimizes “latest N” queries like `WHERE conversation_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2` by satisfying both sort keys from the index (often avoiding an extra sort).
+  - Uses the monotonic primary key `id` as a deterministic tie-breaker when multiple rows share the same `created_at`, preserving user→bot ordering as required.
 
 ## Production Considerations
 

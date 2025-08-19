@@ -47,7 +47,7 @@ class PgMessageRepo(MessageRepoPort):
             ORDER BY created_at DESC, message_id DESC
             LIMIT %s
         ) sub
-        ORDER BY created_at ASC
+        ORDER BY created_at ASC, message_id ASC
         """
         async with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(q, (conversation_id, limit))

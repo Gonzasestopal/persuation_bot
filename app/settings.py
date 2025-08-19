@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: AnyStr
     POOL_MIN: int = 1
     POOL_MAX: int = 10
+    OPENAI_API_KEY: str
+    LLM_PROVIDER: str = 'openai'
 
     class Config:
         env_file = ".env"

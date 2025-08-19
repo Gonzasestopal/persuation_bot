@@ -1,3 +1,5 @@
+from functools import partial
+
 from fastapi import Depends
 
 from app.adapters.llm.dummy import DummyLLMAdapter
@@ -17,5 +19,11 @@ def get_llm(provider: str = None):
     return DummyLLMAdapter()
 
 
-def get_service(repo=Depends(get_repo), llm=Depends(get_llm)) -> MessageService:
+def get_service(
+    repo=Depends(get_repo),
+    llm=Depends(partial(
+        get_llm,
+        provider=settings.LLM_PROVIDER,
+        ))
+) -> MessageService:
     return MessageService(parser=parse_topic_side, repo=repo, llm=llm)

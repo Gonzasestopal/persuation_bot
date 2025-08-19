@@ -12,6 +12,7 @@ An LLM-based chatbot that takes in messages from a user, processes them, and gen
 8. [Non Functional Requirements](#non-functional-requirements)
 9. [Database Optimization](#database-optimization)
 10. [Production Considerations](#produciton-considerations)
+11. [LLM](#llm)
 
 ## Overview
 This application challenges you to persuade a chatbot to adopt your point of view while it stands its ground on the initial stance.
@@ -249,3 +250,29 @@ For this implementation I went with the subquery approach because it’s simpler
 ## Production Considerations
 
 For simplicity, expired conversations will not be physically deleted from the database in this implementation. In a production system, you would typically run a periodic cleanup job to purge expired rows.
+
+## LLM
+We consider both antropic and openAI providers for this project. But we prioritize models with fast response for our low latency cap, theres no token limit (hard requirement) or costs related requirement so we dont take that in account.
+
+I made an approximate calculation token usage for medium-resistance debate bot.
+
+Since max history is capped at 10 messages (user, bot) we only have to take in consideration message history token less 3000 units than and output tokens less than 400 units.
+
+>  [!IMPORTANT]
+> Keep prompt ≤ 2.5–3k tokens: last 5 user + 5 bot turns, plus a 120–180-token rolling summary.
+> Summarize oversized user turns to ≤600 tokens before passing to the model.
+
+### GPT-4o
+Optimized for speed: first tokens in ~1–2s, full ~300–500 token reply often well under 10s.
+
+Even long (1k–1.5k token) answers usually <20s.
+
+### Claude 3.5
+Sonnet: typically <10s for medium answers; competitive with GPT-4o.
+
+Opus: slower — long answers can push past 30s if you don’t stream or limit length.
+
+Streaming works but isn’t quite as snappy as GPT-4o.
+
+### Conclusion
+Given our strict <30 s response time requirement, GPT-4o is our safer default: it delivers first tokens in ~1–2 s and completes medium answers in under 10 s, with predictable throughput. Claude 3.5 Sonnet is a viable alternative when longer context or a more conversational style is desired, but requires stricter output caps to guarantee latency. Claude 3.5 Opus is excluded due to its slower generation speed, which risks breaching our latency SLA.

@@ -13,3 +13,4 @@ class Conversation(BaseModel):
 class Message(BaseModel):
     role: str = Field(pattern="^(user|bot)$")
     message: str
+    created_at: datetime = None

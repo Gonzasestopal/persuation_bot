@@ -8,12 +8,12 @@ from app.domain.ports.message_repo import MessageRepoPort
 
 class MessageService(object):
     def __init__(
-            self,
-            parser,
-            repo: MessageRepoPort,
-            llm: LLMPort,
-            history_limit=5,
-        ):
+        self,
+        parser,
+        repo: MessageRepoPort,
+        llm: LLMPort,
+        history_limit=5,
+    ):
         self.parser = parser
         self.repo = repo
         self.history_limit = history_limit

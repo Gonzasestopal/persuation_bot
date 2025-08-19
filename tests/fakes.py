@@ -42,8 +42,10 @@ class InMemoryRepo(MessageRepoPort):
         })
 
     async def last_messages(self, conversation_id: int, *, limit: int) -> List[Dict]:
+        if limit <= 0:
+            return []
         rows = [m for m in self.messages if m["conversation_id"] == conversation_id]
-        rows.sort(key=lambda m: m["created_at"], reverse=True)
-        rows = rows[:limit]
-        rows.reverse()
-        return rows
+        # Sort ASC by created_at, then by message_id as a stable tiebreaker
+        rows.sort(key=lambda m: (m["created_at"], m["message_id"]))
+        # Take the latest N while keeping ASC order
+        return rows[-limit:]

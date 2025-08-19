@@ -59,3 +59,21 @@ async def test_add_and_list_last_messages_order_and_limit(repo):
     assert times == sorted(times)
     # only fields we expect
     assert {"role", "message", "created_at"} <= out[0].keys()
+
+
+@pytest.mark.asyncio
+async def test_last_messages_window_slides_on_new_message(repo):
+    cid = await repo.create_conversation(topic="T", side="pro")
+
+    for i in range(5):
+        await repo.add_message(cid, role="user", text=f"m{i}")
+
+    out1 = await repo.last_messages(cid, limit=5)
+    assert [m["message"] for m in out1] == ["m0", "m1", "m2", "m3", "m4"]
+
+    await repo.add_message(cid, role="user", text="m5")
+    out2 = await repo.last_messages(cid, limit=5)
+    assert [m["message"] for m in out2] == ["m1", "m2", "m3", "m4", "m5"]
+
+    t2 = [m["created_at"] for m in out2]
+    assert t2 == sorted(t2)

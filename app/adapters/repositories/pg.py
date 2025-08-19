@@ -38,13 +38,18 @@ class PgMessageRepo(MessageRepoPort):
             await cur.execute(q, (conversation_id, role, text))
 
     async def last_messages(self, conversation_id: int, *, limit: int) -> List[Message]:
-        q = """SELECT role, message
-               FROM messages
-               WHERE conversation_id = %s
-               ORDER BY created_at DESC
-               LIMIT %s"""
+        q = """
+        SELECT role, message, created_at
+        FROM (
+            SELECT role, message, created_at, id
+            FROM messages
+            WHERE conversation_id = %s
+            ORDER BY created_at DESC, id DESC
+            LIMIT %s
+        ) sub
+        ORDER BY created_at ASC, id ASC
+        """
         async with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(q, (conversation_id, limit))
             rows = await cur.fetchall()
-            rows.reverse()  # return oldest→newest
-            return [Message(**dict(r)) for r in reversed(rows)]
+            return [Message(**dict(r)) for r in rows]

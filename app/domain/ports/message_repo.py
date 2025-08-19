@@ -1,11 +1,13 @@
-from typing import Dict, List, Optional, Protocol
+from typing import List, Optional, Protocol
+
+from app.domain.models import Conversation, Message
 
 
 class MessageRepoPort(Protocol):
     async def create_conversation(self, *, topic: str, side: str) -> int:
         raise NotImplementedError
 
-    async def get_conversation(self, conversation_id: int) -> Optional[Dict]:
+    async def get_conversation(self, conversation_id: int) -> Optional[Conversation]:
         raise NotImplementedError
 
     async def touch_conversation(self, conversation_id: int) -> None:
@@ -14,5 +16,5 @@ class MessageRepoPort(Protocol):
     async def add_message(self, conversation_id: int, *, role: str, text: str) -> None:
         raise NotImplementedError
 
-    async def last_messages(self, conversation_id: int, *, limit: int) -> List[Dict]:
+    async def last_messages(self, conversation_id: int, *, limit: int) -> List[Message]:
         raise NotImplementedError

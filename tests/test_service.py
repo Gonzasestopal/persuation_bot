@@ -4,20 +4,22 @@ from unittest.mock import AsyncMock, Mock, call
 
 import pytest
 
+from app.domain.models import Conversation, Message
 from app.services.message_service import MessageService
 
 
 @pytest.fixture
 def repo():
     expired_time = datetime.now(timezone.utc) + timedelta(minutes=60)
+    conversation = Conversation(id=123, topic="X", side="con", expires_at=expired_time)
     return SimpleNamespace(
         create_conversation=AsyncMock(return_value=42),  # not used here
-        get_conversation=AsyncMock(return_value={"conversation_id": 123, "topic": "X", "side": "con", "expires_at": expired_time}),
+        get_conversation=AsyncMock(return_value=conversation),
         touch_conversation=AsyncMock(),
         add_message=AsyncMock(),
         last_messages=AsyncMock(return_value=[
-            {"role": "user", "message": "I firmly believe..."},
-            {"role": "bot",  "message": "OK"},
+            Message(role="user", message="I firmly believe..."),
+            Message(role="bot", message="OK"),
         ]),
     )
 
@@ -120,14 +122,16 @@ async def test_continue_with_empty_message(repo, llm):
 
 @pytest.mark.asyncio
 async def test_start_writes_messages_and_returns_window(llm):
+    user_message = Message(role="user", message="Topic: X, Side: con")
+    bot_message = Message(role="bot", message="bot reply")
     repo = SimpleNamespace(
         create_conversation=AsyncMock(return_value=42),
         get_conversation=AsyncMock(),
         touch_conversation=AsyncMock(),
         add_message=AsyncMock(),
         last_messages=AsyncMock(return_value=[
-            {"role": "user", "message": "Topic: X, Side: con"},
-            {"role": "bot",  "message": "bot reply"},
+            user_message,
+            bot_message,
         ]),
     )
 
@@ -148,14 +152,16 @@ async def test_start_writes_messages_and_returns_window(llm):
     assert out == {
         "conversation_id": 42,
         "message": [
-            {"role": "user", "message": "Topic: X, Side: con"},
-            {"role": "bot",  "message": "bot reply"},
+            user_message,
+            bot_message,
         ],
     }
 
 
 @pytest.mark.asyncio
 async def test_continue_conversation_writes_and_returns_window(repo, llm):
+    user_message = Message(role="user", message="I firmly believe...")
+    bot_message = Message(role="bot", message="OK")
     parser = Mock(side_effect=AssertionError("parser must not be called on continue"))
     svc = MessageService(parser=parser, repo=repo, llm=llm, history_limit=5)
 
@@ -174,8 +180,8 @@ async def test_continue_conversation_writes_and_returns_window(repo, llm):
     assert out == {
         "conversation_id": 123,
         "message": [
-            {"role": "user", "message": "I firmly believe..."},
-            {"role": "bot",  "message": "OK"},
+            user_message,
+            bot_message,
         ],
     }
 
@@ -192,7 +198,7 @@ async def test_continue_conversation_unknown_id_raises_keyerror(llm):
     parser = Mock()
     svc = MessageService(parser=parser, repo=repo, llm=llm)
 
-    with pytest.raises(KeyError):
+    with pytest.raises(KeyError, match="not found"):
         await svc.continue_conversation(message="hi", conversation_id=9999)
 
     repo.get_conversation.assert_awaited_once_with(conversation_id=9999)
@@ -203,15 +209,18 @@ async def test_continue_conversation_unknown_id_raises_keyerror(llm):
 
 @pytest.mark.asyncio
 async def test_continue_conversation_respects_history_limit(llm):
+    user_message = Message(role="user", message="hi")
+    bot_message = Message(role="bot", message="bot reply")
     expired_time = datetime.now(timezone.utc) + timedelta(minutes=60)
+    conversation = Conversation(id=123, topic="X", side="con", expires_at=expired_time)
     repo = SimpleNamespace(
         create_conversation=AsyncMock(),
-        get_conversation=AsyncMock(return_value={"conversation_id": 123, "topic": "X", "side": "con", "expires_at": expired_time}),
+        get_conversation=AsyncMock(return_value=conversation),
         touch_conversation=AsyncMock(),
         add_message=AsyncMock(),
         last_messages=AsyncMock(return_value=[
-            {"role": "user", "message": "hi"},
-            {"role": "bot", "message": "bot reply"},
+            user_message,
+            bot_message,
         ]),
     )
 
@@ -234,15 +243,16 @@ async def test_continue_conversation_respects_history_limit(llm):
     assert out == {
         "conversation_id": 123,
         "message": [
-            {"role": "user", "message": "hi"},
-            {"role": "bot", "message": "bot reply"},
+            user_message,
+            bot_message,
         ],
     }
 
 @pytest.mark.asyncio
 async def test_continue_conversation_expired(repo, llm):
     expired_time = datetime.now(timezone.utc) - timedelta(minutes=1)
-    repo.get_conversation.return_value = {"conversation_id": 123, "expires_at": expired_time}
+    conversation = Conversation(id=123, topic="X", side="con", expires_at=expired_time)
+    repo.get_conversation.return_value = conversation
 
     svc = MessageService(parser=Mock(), repo=repo, llm=llm)
 
@@ -261,10 +271,10 @@ async def test_start_conversation_calls_llm_and_stores_reply():
         touch_conversation=AsyncMock(),
         add_message=AsyncMock(),
         last_messages=AsyncMock(side_effect=[
-            [{"role": "user", "message": "Topic: X, Side: con"}],
+            [Message(role="user", message="Topic: X, Side: con")],
             [
-                {"role": "user", "message": "Topic: X, Side: con"},
-                {"role": "bot", "message": "Hello from LLM"},
+                Message(role="user", message="Topic: X, Side: con"),
+                Message(role="bot", message="Hello from LLM"),
             ],  # final return
         ]),
     )
@@ -278,7 +288,7 @@ async def test_start_conversation_calls_llm_and_stores_reply():
     out = await svc.start_conversation("X", "con", "Topic: X, Side: con")
 
     llm.generate.assert_awaited_once_with([
-        {"role": "user", "message": "Topic: X, Side: con"},
+        Message(role="user", message="Topic: X, Side: con"),
     ])
 
     repo.add_message.assert_has_awaits([
@@ -286,4 +296,4 @@ async def test_start_conversation_calls_llm_and_stores_reply():
         call(conversation_id=42, role="bot", text="Hello from LLM"),
     ])
 
-    assert out["message"][-1]["message"] == "Hello from LLM"
+    assert out["message"][-1].message == "Hello from LLM"

@@ -27,7 +27,8 @@ def repo():
 @pytest.fixture
 def llm():
     return SimpleNamespace(
-        generate=AsyncMock(return_value='bot reply')
+        generate=AsyncMock(return_value='bot reply'),
+        debate=AsyncMock(return_value='bot msg processing reply')
     )
 
 
@@ -172,7 +173,7 @@ async def test_continue_conversation_writes_and_returns_window(repo, llm):
     repo.touch_conversation.assert_awaited_once_with(conversation_id=123)
     repo.add_message.assert_has_awaits([
         call(conversation_id=123, role="user", text="I firmly believe..."),
-        call(conversation_id=123, role="bot",  text="bot reply"),
+        call(conversation_id=123, role="bot",  text="bot msg processing reply"),
     ])
     repo.last_messages.assert_has_awaits([
         call(conversation_id=123, limit=10),  # history for LLM
@@ -234,7 +235,7 @@ async def test_continue_conversation_respects_history_limit(llm):
     repo.touch_conversation.assert_awaited_once_with(conversation_id=123)
     repo.add_message.assert_has_awaits([
         call(conversation_id=123, role="user", text="hi"),
-        call(conversation_id=123, role="bot",  text="bot reply"),
+        call(conversation_id=123, role="bot",  text="bot msg processing reply"),
     ])
     # history_limit=2 → 2 * 2 = 4 messages window
     repo.last_messages.assert_has_awaits([

@@ -51,10 +51,10 @@ class MessageService(object):
         if not conversation:
             raise KeyError("conversation_id not found")
 
-        if conversation['expires_at'] <= datetime.now(timezone.utc):
+        if conversation.expires_at <= datetime.now(timezone.utc):
             raise KeyError("conversation_id expired")
 
-        cid = conversation["conversation_id"]
+        cid = conversation.id
         await self.repo.touch_conversation(conversation_id=cid)
         await self.repo.add_message(conversation_id=cid, role="user", text=message)
 

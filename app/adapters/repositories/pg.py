@@ -1,6 +1,9 @@
+from typing import List, Optional
+
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
+from app.domain.models import Conversation, Message
 from app.domain.ports.message_repo import MessageRepoPort
 
 
@@ -15,12 +18,12 @@ class PgMessageRepo(MessageRepoPort):
             (cid,) = await cur.fetchone()
             return cid
 
-    async def get_conversation(self, conversation_id: int):
-        q = "SELECT conversation_id, topic, side, expires_at FROM conversations WHERE conversation_id = %s"
+    async def get_conversation(self, conversation_id: int) -> Optional[Conversation]:
+        q = "SELECT conversation_id AS id, topic, side, expires_at FROM conversations WHERE conversation_id = %s"
         async with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(q, (conversation_id,))
             row = await cur.fetchone()
-            return dict(row) if row else None
+            return Conversation(**row) if row else None
 
     async def touch_conversation(self, conversation_id: int) -> None:
         q = """UPDATE conversations
@@ -34,7 +37,7 @@ class PgMessageRepo(MessageRepoPort):
         async with self.pool.connection() as conn, conn.cursor() as cur:
             await cur.execute(q, (conversation_id, role, text))
 
-    async def last_messages(self, conversation_id: int, *, limit: int):
+    async def last_messages(self, conversation_id: int, *, limit: int) -> List[Message]:
         q = """SELECT role, message
                FROM messages
                WHERE conversation_id = %s
@@ -44,4 +47,4 @@ class PgMessageRepo(MessageRepoPort):
             await cur.execute(q, (conversation_id, limit))
             rows = await cur.fetchall()
             rows.reverse()  # return oldest→newest
-            return rows
+            return [Message(**dict(r)) for r in reversed(rows)]

@@ -2,7 +2,9 @@ fastapi
 uvicorn[standard]
 pytest
 yoyo-database-migrations
-psycopg
+psycopg[binary]==3.2.*
 httpx
 pydantic-settings
 pytest-asyncio
+psycopg2-binary
+psycopg_pool

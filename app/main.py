@@ -1,9 +1,11 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from psycopg_pool import AsyncConnectionPool
 
 from app.api.messages import router
+from app.domain.exceptions import ConfigError
 from app.settings import settings
 
 
@@ -26,6 +28,6 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(router)
 
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
+@app.exception_handler(ConfigError)
+async def config_error_handler(_: Request, exc: ConfigError):
+    return JSONResponse(status_code=422, content={"detail": str(exc)})

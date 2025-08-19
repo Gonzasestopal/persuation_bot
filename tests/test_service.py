@@ -122,10 +122,12 @@ async def test_continue_with_empty_message(repo, llm):
 
 @pytest.mark.asyncio
 async def test_start_writes_messages_and_returns_window(llm):
+    expires_at = datetime.utcnow()
+    conv = Conversation(id=42, topic='X', side='con', expires_at=expires_at)
     user_message = Message(role="user", message="Topic: X, Side: con")
     bot_message = Message(role="bot", message="bot reply")
     repo = SimpleNamespace(
-        create_conversation=AsyncMock(return_value=42),
+        create_conversation=AsyncMock(return_value=conv),
         get_conversation=AsyncMock(),
         touch_conversation=AsyncMock(),
         add_message=AsyncMock(),
@@ -146,7 +148,6 @@ async def test_start_writes_messages_and_returns_window(llm):
         call(conversation_id=42, role="bot",  text="bot reply"),
     ])
     repo.last_messages.assert_has_awaits([
-        call(conversation_id=42, limit=10),  # history for LLM
         call(conversation_id=42, limit=10),  # final return
     ])
     assert out == {
@@ -265,13 +266,14 @@ async def test_continue_conversation_expired(repo, llm):
 
 @pytest.mark.asyncio
 async def test_start_conversation_calls_llm_and_stores_reply():
+    expires_at = datetime.utcnow()
+    conv = Conversation(id=42, topic='X', side='con', expires_at=expires_at)
     repo = SimpleNamespace(
-        create_conversation=AsyncMock(return_value=42),
+        create_conversation=AsyncMock(return_value=conv),
         get_conversation=AsyncMock(),
         touch_conversation=AsyncMock(),
         add_message=AsyncMock(),
         last_messages=AsyncMock(side_effect=[
-            [Message(role="user", message="Topic: X, Side: con")],
             [
                 Message(role="user", message="Topic: X, Side: con"),
                 Message(role="bot", message="Hello from LLM"),
@@ -287,9 +289,7 @@ async def test_start_conversation_calls_llm_and_stores_reply():
 
     out = await svc.start_conversation("X", "con", "Topic: X, Side: con")
 
-    llm.generate.assert_awaited_once_with([
-        Message(role="user", message="Topic: X, Side: con"),
-    ])
+    llm.generate.assert_awaited_once_with(conversation=conv)
 
     repo.add_message.assert_has_awaits([
         call(conversation_id=42, role="user", text="Topic: X, Side: con"),

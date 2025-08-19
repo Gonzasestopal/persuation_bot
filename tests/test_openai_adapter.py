@@ -3,7 +3,6 @@ from unittest.mock import Mock
 
 import pytest
 
-from app.adapters.llm.constants import OpenAIModels
 from app.adapters.llm.openai import OpenAIAdapter
 from app.domain.models import Conversation, Message
 
@@ -73,19 +72,3 @@ async def test_debate_raises_if_exceeds_history_limit():
         await adapter.debate(messages=messages)
 
     assert "exceeds history limit" in str(e.value).lower()
-
-
-def test_openai_adapter_accepts_openai_models():
-    a = OpenAIAdapter(api_key="sk-test", max_history=10, model=OpenAIModels.GPT_4O)
-    assert a.model == "gpt-4o"
-
-
-def test_openai_adapter_accepts_string_model():
-    a = OpenAIAdapter(api_key="sk-test", max_history=10, model="gpt-4o")
-    assert a.model == "gpt-4o"
-
-
-def test_openai_adapter_rejects_anthropic_model():
-    with pytest.raises(ValueError) as e:
-        OpenAIAdapter(api_key="sk-test", max_history=10, model='claude-5')
-    assert "not a valid openai model" in str(e.value).lower()

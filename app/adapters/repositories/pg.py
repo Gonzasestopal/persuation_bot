@@ -11,12 +11,12 @@ class PgMessageRepo(MessageRepoPort):
     def __init__(self, pool: AsyncConnectionPool):
         self.pool = pool
 
-    async def create_conversation(self, *, topic: str, side: str) -> int:
-        q = "INSERT INTO conversations (topic, side) VALUES (%s, %s) RETURNING conversation_id"
+    async def create_conversation(self, *, topic: str, side: str) -> Conversation:
+        q = "INSERT INTO conversations (topic, side) VALUES (%s, %s) RETURNING conversation_id, expires_at"
         async with self.pool.connection() as conn, conn.cursor() as cur:
             await cur.execute(q, (topic, side))
-            (cid,) = await cur.fetchone()
-            return cid
+            (cid, expires_at) = await cur.fetchone()
+            return Conversation(id=cid, topic=topic, side=side, expires_at=expires_at)
 
     async def get_conversation(self, conversation_id: int) -> Optional[Conversation]:
         q = "SELECT conversation_id AS id, topic, side, expires_at FROM conversations WHERE conversation_id = %s"

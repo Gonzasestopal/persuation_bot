@@ -28,21 +28,18 @@ class MessageService(object):
         return await self.continue_conversation(message, conversation_id)
 
     async def start_conversation(self, topic: str, side: str, message: str = None):
-        conversation_id = await self.repo.create_conversation(topic=topic, side=side)
+        conversation = await self.repo.create_conversation(topic=topic, side=side)
 
-        # store user message
-        await self.repo.add_message(conversation_id=conversation_id, role="user", text=message)
+        await self.repo.add_message(conversation_id=conversation.id, role="user", text=message)
 
-        # fetch recent history and call LLM
-        history = await self.repo.last_messages(conversation_id=conversation_id, limit=self.history_limit * 2)
-        reply = await self.llm.generate(history)
+        reply = await self.llm.generate(conversation=conversation)
 
         # store LLM reply
-        await self.repo.add_message(conversation_id=conversation_id, role="bot", text=reply)
+        await self.repo.add_message(conversation_id=conversation.id, role="bot", text=reply)
 
         return {
-            "conversation_id": conversation_id,
-            "message": await self.repo.last_messages(conversation_id=conversation_id, limit=self.history_limit * 2),
+            "conversation_id": conversation.id,
+            "message": await self.repo.last_messages(conversation_id=conversation.id, limit=self.history_limit * 2),
         }
 
     async def continue_conversation(self, message: str, conversation_id: int):

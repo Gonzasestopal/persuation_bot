@@ -1,8 +1,8 @@
-from typing import List, Optional
+from typing import Iterable, List, Optional
 
 from openai import OpenAI
 
-from app.adapters.llm.constants import OpenAIModels
+from app.adapters.llm.constants import SYSTEM_PROMPT, OpenAIModels
 from app.domain.models import Conversation, Message
 from app.domain.ports.llm import LLMPort
 
@@ -21,8 +21,40 @@ class OpenAIAdapter(LLMPort):
         self.temperature = temperature
         self.max_history = max_history
 
+    @property
+    def system_prompt(self):
+        return SYSTEM_PROMPT
+
+    def _build_user_msg(self, topic: str, side: str):
+        return (
+            f"You are debating the topic '{topic}'.\n"
+            f"Take the {side} side.\n\n"
+        )
+
+    def _request(self, input_msgs: Iterable[dict]) -> str:
+        resp = self.client.responses.create(
+            model=self.model,
+            input=list(input_msgs),
+            temperature=self.temperature,
+            max_output_tokens=300,
+        )
+        return resp.output_text
+
     async def generate(self, conversation: Conversation) -> str:
-        raise NotImplementedError
+        user_message = self._build_user_msg(topic=conversation.topic, side=conversation.side)
+        msgs = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": user_message,
+            },
+        ]
+        resp = self.client.responses.create(
+            model=self.model,
+            temperature=self.temperature,
+            input=msgs,
+        )
+        return getattr(resp, "output_text", "")
 
     async def debate(self, messages: List[Message]) -> str:
         raise NotImplementedError

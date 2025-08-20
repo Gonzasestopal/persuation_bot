@@ -52,8 +52,8 @@ async def test_adapter_generate_builds_prompt_and_returns_output(monkeypatch):
     assert sent["temperature"] == 0.3
     msgs = sent["input"]
     assert msgs[1]["role"] == "user"
-    assert "Topic: X" in msgs[1]["content"]
-    assert "Side: con" in msgs[1]["content"]
+    assert "You are debating the topic 'X'" in msgs[1]["content"]
+    assert "Take the con side." in msgs[1]["content"]
 
 
 @pytest.mark.asyncio

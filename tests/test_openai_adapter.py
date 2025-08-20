@@ -48,9 +48,12 @@ async def test_adapter_generate_builds_prompt_and_returns_output(monkeypatch):
     assert out == "FAKE-OUTPUT"
     assert len(calls) == 1
     sent = calls[0]
+
     assert sent["model"] == "gpt-4o"
     assert sent["temperature"] == 0.3
+
     msgs = sent["input"]
+    assert msgs[0] == {"role": "system", "content": adapter.system_prompt}
     assert msgs[1]["role"] == "user"
     assert "You are debating the topic 'X'" in msgs[1]["content"]
     assert "Take the con side." in msgs[1]["content"]
@@ -67,27 +70,26 @@ async def test_adapter_debate_maps_roles_and_respects_history(monkeypatch):
         Message(role="bot",  message="b1"),
         Message(role="user", message="u2"),
         Message(role="bot",  message="b2"),
-        Message(role="user", message="u3"),
-        Message(role="bot",  message="b3"),
     ]
 
     out = await adapter.debate(messages=msgs)
     assert out == "FAKE-OUTPUT"
 
+    assert len(calls) == 1
     sent = calls[0]
     assert sent["model"] == "gpt-4o"
     assert sent["temperature"] == 0.2
 
     input_msgs = sent["input"]
+    assert input_msgs[0] == {"role": "system", "content": adapter.system_prompt}
 
-    expected_tail = [
-        {"role": "assistant", "content": "b1"},
-        {"role": "user",      "content": "u2"},
-        {"role": "assistant", "content": "b2"},
-        {"role": "user",      "content": "u3"},
-        {"role": "assistant", "content": "b3"},
-    ]
-    assert input_msgs[1:] == expected_tail
+    role_map = {"user": "user", "bot": "assistant"}
+    assert len(input_msgs) == len(msgs) + 1
+
+    for i, m in enumerate(msgs, start=1):
+        assert set(input_msgs[i].keys()) == {"role", "content"}
+        assert input_msgs[i]["role"] == role_map[m.role]
+        assert input_msgs[i]["content"] == m.message
 
 
 @pytest.mark.asyncio

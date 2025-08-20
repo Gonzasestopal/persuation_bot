@@ -99,3 +99,20 @@ async def test_user_bot_order_preserved_with_same_timestamp(repo):
         ("user", "u1"), ("bot", "b1"),
         ("user", "u2"), ("bot", "b2"),
     ]
+
+
+@pytest.mark.asyncio
+async def test_all_messages(repo):
+    conv = await repo.create_conversation(topic="T", side="pro")
+    another_conv = await repo.create_conversation(topic='C', side="pro")
+
+    for i in range(10):
+        await repo.add_message(conv.id, role="user", text=f"m{i}")
+
+    await repo.add_message(another_conv.id, role="user", text=f"m{i}")
+
+    conv_messages = await repo.all_messages(conv.id)
+    another_conv_messages = await repo.all_messages(another_conv.id)
+
+    assert len(conv_messages) == 10
+    assert len(another_conv_messages) == 1

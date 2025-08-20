@@ -70,3 +70,7 @@ class InMemoryRepo(MessageRepoPort):
         rows.sort(key=lambda m: (m["created_at"], m["message_id"]))
         # Take the latest N while keeping ASC order
         return [Message(**dict(r)) for r in rows[-limit:]]
+
+    async def all_messages(self, conversation_id: int) -> List[Message]:
+        rows = [m for m in self.messages if m["conversation_id"] == conversation_id]
+        return [Message(**dict(r)) for r in rows]

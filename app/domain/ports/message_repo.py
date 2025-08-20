@@ -18,3 +18,6 @@ class MessageRepoPort(Protocol):
 
     async def last_messages(self, conversation_id: int, *, limit: int) -> List[Message]:
         raise NotImplementedError
+
+    async def all_messages(self, conversation_id: int) -> List[Message]:
+        raise NotImplementedError

@@ -100,6 +100,10 @@ POSTGRES_USER=app
 POSTGRES_PASSWORD=app
 POSTGRES_DB=app
 DATABASE_URL=postgresql://app:app@db:5432/app
+OPENAI_API_KEY=key
+LLM_PROVIDER=openai
+LLM_MODEL=gpt-4o
+
 ```
 
 ### Running the service
@@ -252,27 +256,44 @@ For this implementation I went with the subquery approach because it’s simpler
 For simplicity, expired conversations will not be physically deleted from the database in this implementation. In a production system, you would typically run a periodic cleanup job to purge expired rows.
 
 ## LLM
-We consider both antropic and openAI providers for this project. But we prioritize models with fast response for our low latency cap, theres no token limit (hard requirement) or costs related requirement so we dont take that in account.
+We consider both **Anthropic** and **OpenAI** providers. We prioritize **fast response** for our low-latency cap; there’s no hard token or cost constraint in scope.
 
-I made an approximate calculation token usage for medium-resistance debate bot.
+We target a **medium-resistance debate bot** and budget prompt length for latency predictability.
 
-Since max history is capped at 10 messages (user, bot) we only have to take in consideration message history token less 3000 units than and output tokens less than 400 units.
-
->  [!IMPORTANT]
-> Keep prompt ≤ 2.5–3k tokens: last 5 user + 5 bot turns, plus a 120–180-token rolling summary.
-> Summarize oversized user turns to ≤600 tokens before passing to the model.
+> [!IMPORTANT]
+> **Prompt budget:** keep input ≤ **2.5–3k tokens**.
+> **Structure**: system prompt + compact context header (Topic, Stance) + last **5 user + 5 bot turns**.
+> *(We will consider a summary for longer conversations)*
+> **Output cap:** aim 80–120 tokens (hard cap 400).
 
 ### GPT-4o
 Optimized for speed: first tokens in ~1–2s, full ~300–500 token reply often well under 10s.
-
 Even long (1k–1.5k token) answers usually <20s.
 
 ### Claude 3.5
-Sonnet: typically <10s for medium answers; competitive with GPT-4o.
+**Sonnet**: typically <10s for medium answers; competitive with GPT-4o.
+**Opus**: slower — long answers can push past 30s if you don’t stream or limit length.
 
-Opus: slower — long answers can push past 30s if you don’t stream or limit length.
+### Capacity Check (token math, approximate)
 
-Streaming works but isn’t quite as snappy as GPT-4o.
+**Building blocks**
+- **System (S):** ~120–180 tokens
+- **Header (H, no summary):** ~45–60 tokens
+- **One pair (P = user+bot, with wrapper):** ~52–73 tokens
+
+**Totals**
+`Total(N pairs) = S + H + N·P`
+
+- **1 pair:** `120–180 + 45–60 + 1·(52–73) = ~217–313`
+- **5 pairs (runtime soft cap):** `= ~425–605`
+- **37 pairs (worst-case safe under 3k):** `= ~2,089–2,941`
+- **42 pairs (Mid-target near 3k):**
+ gives ~**2,992** mid-case
+  *(Note: worst-case at N=45 can exceed 3k; we will raise error for now.)*
 
 ### Conclusion
-Given our strict <30 s response time requirement, GPT-4o is our safer default: it delivers first tokens in ~1–2 s and completes medium answers in under 10 s, with predictable throughput. Claude 3.5 Sonnet is a viable alternative when longer context or a more conversational style is desired, but requires stricter output caps to guarantee latency. Claude 3.5 Opus is excluded due to its slower generation speed, which risks breaching our latency SLA.
+Given our strict **<30s** response requirement, **GPT-4o** is the safer default: fast first tokens and consistent completion under 10s for medium replies.
+**Claude 3.5 Sonnet** is a solid alternative when a more conversational style is desired; keep output caps tighter to protect latency.
+**Claude 3.5 Opus** is excluded due to slower generation, risking SLA breaches without streaming/caps.
+
+> Note: OpenAI and Anthropic have different tokenizers; counts vary slightly. We use the same budgeting pattern and enforce a ≤3k input guard at send time.

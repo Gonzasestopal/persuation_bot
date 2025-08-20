@@ -53,3 +53,14 @@ class PgMessageRepo(MessageRepoPort):
             await cur.execute(q, (conversation_id, limit))
             rows = await cur.fetchall()
             return [Message(**dict(r)) for r in rows]
+
+    async def all_messages(self, conversation_id: int) -> List[Message]:
+        q = """
+        SELECT role, message, created_at
+        FROM messages
+        WHERE conversation_id = %s
+        """
+        async with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(q, (conversation_id,))
+            rows = await cur.fetchall()
+            return [Message(**dict(r)) for r in rows]

@@ -64,3 +64,29 @@ def test_openai_empty_api_key_raises(monkeypatch):
         fx.get_llm(provider="openai")
 
     assert "OPENAI_API_KEY is required" in str(e.value)
+
+
+def test_set_debate_bot_difficulty_invalid(monkeypatch):
+    stub_settings(monkeypatch, DIFFICULTY="hard")
+
+    with pytest.raises(ConfigError) as e:
+        fx.get_llm(provider="openai")
+
+    assert "ONLY EASY AND MEDIUM DIFFICULTY ARE SUPPORTED" in str(e.value)
+
+
+def test_set_debate_bot_difficulty_empty(monkeypatch):
+    stub_settings(monkeypatch, DIFFICULTY="")
+
+    with pytest.raises(ConfigError) as e:
+        fx.get_llm(provider="openai")
+
+    assert "DIFFICULTY is required" in str(e.value)
+
+
+def test_set_debate_bot_difficulty_easy(monkeypatch):
+    stub_settings(monkeypatch, DIFFICULTY="medium")
+
+    a = fx.get_llm(provider="openai")
+
+    assert a.difficulty == Difficulty.MEDIUM

@@ -15,11 +15,13 @@ class OpenAIAdapter(LLMPort):
         client: Optional[OpenAI] = None,
         model: OpenAIModels = OpenAIModels.GPT_4O,
         temperature: float = 0.3,
+        max_output_tokens: int = 80,
     ):
         self.client = client or OpenAI(api_key=api_key)
         self.model = model
         self.temperature = temperature
         self.max_history = max_history
+        self.max_output_tokens = max_output_tokens
 
     @property
     def system_prompt(self):
@@ -36,55 +38,27 @@ class OpenAIAdapter(LLMPort):
             model=self.model,
             input=list(input_msgs),
             temperature=self.temperature,
-            max_output_tokens=300,
+            max_output_tokens=self.max_output_tokens,
         )
         return resp.output_text
 
     async def generate(self, conversation: Conversation) -> str:
-        user_message = self._build_user_msg(
-            topic=conversation.topic,
-            side=conversation.side,
-        )
+        user_message = self._build_user_msg(conversation.topic, conversation.side)
         msgs = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": user_message,
-            },
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": user_message},
         ]
-        resp = self.client.responses.create(
-            model=self.model,
-            temperature=self.temperature,
-            input=msgs,
-        )
-        return getattr(resp, "output_text", "")
+        return self._request(msgs)
 
     @staticmethod
     def _map_history(messages: List[Message]) -> List[dict]:
-        return [
-            {
-                "role": "assistant" if m.role == "bot" else "user",
-                "content": m.message,
-            }
-            for m in messages
-        ]
+        return [{"role": ("assistant" if m.role == "bot" else "user"), "content": m.message}
+                for m in messages]
 
     async def debate(self, messages: List[Message]) -> str:
         if len(messages) > self.max_history:
             raise ValueError("Exceeds history limit")
 
         mapped = self._map_history(messages)
-
-        input_msgs = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            *mapped,
-        ]
-
-        resp = self.client.responses.create(
-            model=self.model,
-            temperature=self.temperature,
-            input=input_msgs,
-        )
-        text = getattr(resp, "output_text", "") or ""
-
-        return text
+        input_msgs = [{"role": "system", "content": self.system_prompt}, *mapped]
+        return self._request(input_msgs)

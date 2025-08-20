@@ -12,7 +12,7 @@ class OpenAIAdapter(LLMPort):
     def __init__(
         self,
         api_key: str,
-        difficulty: Difficulty,
+        difficulty: Difficulty = Difficulty.EASY,
         client: Optional[OpenAI] = None,
         model: OpenAIModels = OpenAIModels.GPT_4O,
         temperature: float = 0.3,

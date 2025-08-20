@@ -26,11 +26,8 @@ def get_llm(
         except ValueError:
             raise ConfigError(f"{default_model} is not a valid OpenAI model")
 
-        max_history_messages = None if settings.HISTORY_LIMIT == 0 else settings.HISTORY_LIMIT * 2
-
         return OpenAIAdapter(
             api_key=settings.OPENAI_API_KEY,
-            max_history=max_history_messages,
             model=default_model,
         )
     return DummyLLMAdapter()

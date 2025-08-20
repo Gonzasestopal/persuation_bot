@@ -25,22 +25,19 @@ class FakeClient:
 def test_adapter_config():
     client = Mock()
     adapter = OpenAIAdapter(
-        max_history=5,
         api_key='test',
         client=client,
     )
 
     assert adapter.client == client
     assert adapter.temperature == 0.3
-    assert adapter.max_history == 5
-
 
 @pytest.mark.asyncio
 async def test_adapter_generate_builds_prompt_and_returns_output(monkeypatch):
     calls = []
     client = FakeClient(calls)
     expires_at = datetime.utcnow()
-    adapter = OpenAIAdapter(max_history=5, api_key="sk-test", client=client, model="gpt-4o", temperature=0.3)
+    adapter = OpenAIAdapter(api_key="sk-test", client=client, model="gpt-4o", temperature=0.3)
 
     conv = Conversation(id=1, topic="X", side="con", expires_at=expires_at)
     out = await adapter.generate(conversation=conv)
@@ -63,7 +60,7 @@ async def test_adapter_generate_builds_prompt_and_returns_output(monkeypatch):
 async def test_adapter_debate_maps_roles_and_respects_history(monkeypatch):
     calls = []
     client = FakeClient(calls)
-    adapter = OpenAIAdapter(max_history=10, api_key="sk-test", client=client, model="gpt-4o", temperature=0.2)
+    adapter = OpenAIAdapter(api_key="sk-test", client=client, model="gpt-4o", temperature=0.2)
 
     msgs = [
         Message(role="user", message="u1"),
@@ -90,29 +87,3 @@ async def test_adapter_debate_maps_roles_and_respects_history(monkeypatch):
         assert set(input_msgs[i].keys()) == {"role", "content"}
         assert input_msgs[i]["role"] == role_map[m.role]
         assert input_msgs[i]["content"] == m.message
-
-
-@pytest.mark.asyncio
-async def test_adapter_debate_allows_unlimited_when_history_limit_zero():
-    calls = []
-    client = FakeClient(calls)
-
-    adapter = OpenAIAdapter(max_history=None, api_key="sk-test", client=client, model="gpt-4o")
-
-    msgs = [
-        Message(role="user", message=f"u{i}") if i % 2 == 0 else Message(role="bot", message=f"b{i}")
-        for i in range(20)
-    ]
-
-    out = await adapter.debate(messages=msgs)
-
-    assert out == "FAKE-OUTPUT"
-    assert len(calls) == 1
-
-    sent = calls[0]
-    assert sent["model"] == "gpt-4o"
-
-    input_msgs = sent["input"]
-    assert input_msgs[0] == {"role": "system", "content": adapter.system_prompt}
-
-    assert len(input_msgs) == len(msgs) + 1

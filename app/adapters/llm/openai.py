@@ -11,7 +11,6 @@ class OpenAIAdapter(LLMPort):
     def __init__(
         self,
         api_key: str,
-        max_history: int,
         client: Optional[OpenAI] = None,
         model: OpenAIModels = OpenAIModels.GPT_4O,
         temperature: float = 0.3,
@@ -20,7 +19,6 @@ class OpenAIAdapter(LLMPort):
         self.client = client or OpenAI(api_key=api_key)
         self.model = model
         self.temperature = temperature
-        self.max_history = max_history
         self.max_output_tokens = max_output_tokens
 
     @property

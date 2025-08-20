@@ -56,7 +56,7 @@ class OpenAIAdapter(LLMPort):
                 for m in messages]
 
     async def debate(self, messages: List[Message]) -> str:
-        if len(messages) > self.max_history:
+        if self.max_history is not None and len(messages) > self.max_history:
             raise ValueError("Exceeds history limit")
 
         mapped = self._map_history(messages)

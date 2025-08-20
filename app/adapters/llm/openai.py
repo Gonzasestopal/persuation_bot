@@ -2,7 +2,8 @@ from typing import Iterable, List, Optional
 
 from openai import OpenAI
 
-from app.adapters.llm.constants import SYSTEM_PROMPT, OpenAIModels
+from app.adapters.llm.constants import (MEDIUM_SYSTEM_PROMPT, SYSTEM_PROMPT,
+                                        Difficulty, OpenAIModels)
 from app.domain.models import Conversation, Message
 from app.domain.ports.llm import LLMPort
 
@@ -11,6 +12,7 @@ class OpenAIAdapter(LLMPort):
     def __init__(
         self,
         api_key: str,
+        difficulty: Difficulty,
         client: Optional[OpenAI] = None,
         model: OpenAIModels = OpenAIModels.GPT_4O,
         temperature: float = 0.3,
@@ -20,9 +22,12 @@ class OpenAIAdapter(LLMPort):
         self.model = model
         self.temperature = temperature
         self.max_output_tokens = max_output_tokens
+        self.difficulty = difficulty
 
     @property
     def system_prompt(self):
+        if self.difficulty == Difficulty.MEDIUM:
+            return MEDIUM_SYSTEM_PROMPT
         return SYSTEM_PROMPT
 
     def _build_user_msg(self, topic: str, side: str):

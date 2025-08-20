@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 import app.factories as fx
-from app.adapters.llm.constants import OpenAIModels, Provider
+from app.adapters.llm.constants import Difficulty, OpenAIModels, Provider
 from app.adapters.llm.dummy import DummyLLMAdapter
 from app.adapters.llm.openai import OpenAIAdapter
 from app.domain.exceptions import ConfigError
@@ -16,6 +16,7 @@ def stub_settings(monkeypatch, **overrides):
         LLM_PROVIDER="openai",
         HISTORY_LIMIT=5,
         REQUEST_TIMEOUT_S=30,
+        DIFFICULTY='easy',
     )
 
     # let overrides replace defaults cleanly

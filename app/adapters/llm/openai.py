@@ -41,7 +41,10 @@ class OpenAIAdapter(LLMPort):
         return resp.output_text
 
     async def generate(self, conversation: Conversation) -> str:
-        user_message = self._build_user_msg(topic=conversation.topic, side=conversation.side)
+        user_message = self._build_user_msg(
+            topic=conversation.topic,
+            side=conversation.side,
+        )
         msgs = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {
@@ -56,5 +59,32 @@ class OpenAIAdapter(LLMPort):
         )
         return getattr(resp, "output_text", "")
 
+    @staticmethod
+    def _map_history(messages: List[Message]) -> List[dict]:
+        return [
+            {
+                "role": "assistant" if m.role == "bot" else "user",
+                "content": m.message,
+            }
+            for m in messages
+        ]
+
     async def debate(self, messages: List[Message]) -> str:
-        raise NotImplementedError
+        if len(messages) > self.max_history:
+            raise ValueError("Exceeds history limit")
+
+        mapped = self._map_history(messages)
+
+        input_msgs = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            *mapped,
+        ]
+
+        resp = self.client.responses.create(
+            model=self.model,
+            temperature=self.temperature,
+            input=input_msgs,
+        )
+        text = getattr(resp, "output_text", "") or ""
+
+        return text

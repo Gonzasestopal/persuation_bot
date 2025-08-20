@@ -21,6 +21,10 @@ def repo():
             Message(role="user", message="I firmly believe..."),
             Message(role="bot", message="OK"),
         ]),
+        all_messages=AsyncMock(return_value=[
+            Message(role="user", message="I firmly believe..."),
+            Message(role="bot", message="OK"),
+        ]),
     )
 
 
@@ -136,6 +140,10 @@ async def test_start_writes_messages_and_returns_window(llm):
             user_message,
             bot_message,
         ]),
+        all_messages=AsyncMock(return_value=[
+            user_message,
+            bot_message,
+        ]),
     )
 
     parser = Mock(return_value=("X", "con"))
@@ -175,8 +183,12 @@ async def test_continue_conversation_writes_and_returns_window(repo, llm):
         call(conversation_id=123, role="user", text="I firmly believe..."),
         call(conversation_id=123, role="bot",  text="bot msg processing reply"),
     ])
+
+    repo.all_messages.assert_has_awaits([
+        call(conversation_id=123),
+    ])
+
     repo.last_messages.assert_has_awaits([
-        call(conversation_id=123, limit=10),  # history for LLM
         call(conversation_id=123, limit=10),  # final return
     ])
     assert out == {
@@ -196,6 +208,7 @@ async def test_continue_conversation_unknown_id_raises_keyerror(llm):
         touch_conversation=AsyncMock(),
         add_message=AsyncMock(),
         last_messages=AsyncMock(),
+        all_messages=AsyncMock(),
     )
     parser = Mock()
     svc = MessageService(parser=parser, repo=repo, llm=llm)
@@ -224,6 +237,10 @@ async def test_continue_conversation_respects_history_limit(llm):
             user_message,
             bot_message,
         ]),
+        all_messages=AsyncMock(return_value=[
+            user_message,
+            bot_message,
+        ]),
     )
 
     parser = Mock(side_effect=AssertionError("parser must not be called"))
@@ -237,9 +254,11 @@ async def test_continue_conversation_respects_history_limit(llm):
         call(conversation_id=123, role="user", text="hi"),
         call(conversation_id=123, role="bot",  text="bot msg processing reply"),
     ])
+    repo.all_messages.assert_has_awaits([
+        call(conversation_id=123),   # history for LLM
+    ])
     # history_limit=2 → 2 * 2 = 4 messages window
     repo.last_messages.assert_has_awaits([
-        call(conversation_id=123, limit=4),  # history for LLM
         call(conversation_id=123, limit=4),  # final return
     ])
     assert out == {
@@ -279,6 +298,10 @@ async def test_start_conversation_calls_llm_and_stores_reply():
                 Message(role="user", message="Topic: X, Side: con"),
                 Message(role="bot", message="Hello from LLM"),
             ],  # final return
+        ]),
+        all_messages=AsyncMock(return_value=[
+                Message(role="user", message="Topic: X, Side: con"),
+                Message(role="bot", message="Hello from LLM"),
         ]),
     )
 

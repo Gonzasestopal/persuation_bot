@@ -58,7 +58,6 @@ class MessageService(object):
 
         reply = await self.llm.debate(
             messages=full_history,
-            conversation=conversation,
         )
         await self.repo.add_message(conversation_id=cid, role="bot", text=reply)
 

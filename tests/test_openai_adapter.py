@@ -93,19 +93,6 @@ async def test_adapter_debate_maps_roles_and_respects_history(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_adapter_debate_raises_when_over_history():
-    adapter = OpenAIAdapter(max_history=2, api_key="sk", client=FakeClient([]))
-    msgs = [Message(role="user", message="u1"),
-            Message(role="bot",  message="b1"),
-            Message(role="user", message="u2")]
-
-    with pytest.raises(ValueError) as e:
-        await adapter.debate(messages=msgs)
-
-    assert "exceeds history limit" in str(e.value).lower()
-
-
-@pytest.mark.asyncio
 async def test_adapter_debate_allows_unlimited_when_history_limit_zero():
     calls = []
     client = FakeClient(calls)

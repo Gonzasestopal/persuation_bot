@@ -64,3 +64,9 @@ def test_openai_empty_api_key_raises(monkeypatch):
         fx.get_llm(provider="openai")
 
     assert "OPENAI_API_KEY is required" in str(e.value)
+
+
+def test_openai_history_limit_is_pairs_times_two(monkeypatch):
+    stub_settings(monkeypatch, OPENAI_API_KEY="sk-test", HISTORY_LIMIT=5)
+    llm = fx.get_llm(provider=Provider.OPENAI.value, model=OpenAIModels.GPT_4O.value)
+    assert llm.max_history == 10

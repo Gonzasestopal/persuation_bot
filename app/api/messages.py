@@ -4,6 +4,7 @@ import asyncio
 from fastapi import APIRouter, Depends
 from starlette.responses import JSONResponse
 
+from app.api.dto import ConversationOut, MessageOut
 from app.api.requests import MessageIn
 from app.factories import get_service
 from app.settings import settings
@@ -11,15 +12,19 @@ from app.settings import settings
 router = APIRouter()
 
 
-@router.post("/messages", status_code=201)
+@router.post("/messages", status_code=201, response_model=ConversationOut)
 async def start_conversation(message: MessageIn, service=Depends(get_service)):
     try:
-        return await asyncio.wait_for(
+        result = await asyncio.wait_for(
             service.handle(
                 conversation_id=message.conversation_id,
                 message=message.message,
             ),
             timeout=settings.REQUEST_TIMEOUT_S,
+        )
+        return ConversationOut(
+            conversation_id=result["conversation_id"],
+            message=[MessageOut(role=m.role, message=m.message) for m in result["message"]],
         )
     except asyncio.TimeoutError:
         return JSONResponse(status_code=503, content={"detail": "response generation timed out"})

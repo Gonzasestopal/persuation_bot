@@ -13,6 +13,7 @@ An LLM-based chatbot that takes in messages from a user, processes them, and gen
 9. [Database Optimization](#database-optimization)
 10. [Production Considerations](#produciton-considerations)
 11. [LLM](#llm)
+12. [Deployment](#deployment)
 
 ## Overview
 This application challenges you to persuade a chatbot to adopt your point of view while it stands its ground on the initial stance.
@@ -94,11 +95,8 @@ cd persuasion_bot
 ```
 
 ### Environment
-Copy .env.example to .env and adjust if needed:
+Copy `.env.example` to `.env` and adjust if needed:
 ```
-POSTGRES_USER=app
-POSTGRES_PASSWORD=app
-POSTGRES_DB=app
 DATABASE_URL=postgresql://app:app@db:5432/app
 OPENAI_API_KEY=key
 LLM_PROVIDER=openai
@@ -298,3 +296,59 @@ Given our strict **<30s** response requirement, **GPT-4o** is the safer default:
 > Note: OpenAI and Anthropic have different tokenizers; counts vary slightly. We use the same budgeting pattern and enforce a ≤3k input guard at send time.
 
 > Note: For conversations that push the input context beyond 3k tokens, we will need to introduce a running summary or trimming strategy to keep requests within budget.
+
+
+## Deployment Guide
+
+We rely on a Backend-as-a-Service (BaaS) such as Supabase or Neon for PostgreSQL to avoid manual infrastructure setup and management.
+For application hosting, any Platform-as-a-Service (PaaS) capable of running Docker containers will work.
+
+For this guide, we use Supabase as the database provider and a generic PaaS for container hosting.
+
+### 1. PostgreSQL (BaaS)
+
+Provision a PostgreSQL instance using your preferred BaaS provider.
+
+Ensure the service provides a connection string in the format:
+
+```
+postgres://<user>:<password>@<host>/<database>?sslmode=require
+```
+
+Update your `.env` file with this connection string under DATABASE_URL.
+
+### 2. REST API (Dockerized)
+
+From the repository root, build and tag the Docker image:
+```
+docker build -t your-dockerhub-username/persuasion-bot:v1 .
+```
+
+Authenticate and push the image:
+```
+docker login
+docker push your-dockerhub-username/persuasion-bot:v1
+```
+
+### 3. Environment Configuration (PaaS)
+
+These values should be set in your PaaS console or configuration dashboard.
+```
+DATABASE_URL=postgres://...
+OPENAI_API_KEY=your_api_key
+LLM_PROVIDER=openai
+LLM_MODEL=gpt-4o
+DIFFICULTY=medium
+```
+
+### 4. Deployment
+- Deploy the pushed Docker image through your PaaS.
+
+- Verify logs and health checks to ensure the service is running correctly.
+
+
+### 5. Database Migrations
+Run database migrations before starting the app:
+```bash
+make migrate DATABASE_URL=
+```

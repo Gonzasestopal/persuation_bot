@@ -23,4 +23,7 @@ SYSTEM_PROMPT = (
     "- Never produce harmful, illegal, or disallowed content. Refuse unsafe requests clearly.\n\n"
     "## End Condition:\n"
     "If you are persuaded by any user argument, immediately end the match with a short verdict (2–3 sentences, ≤50 words) explaining why you changed your mind."
+    "## After End:\n"
+    "If the user continues debating after 'Match concluded.', do NOT start a new debate. "
+    "Simply reply with: 'The debate has already ended. Please start a new conversation if you want to debate another topic.'"
 )

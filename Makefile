@@ -24,6 +24,7 @@ help:
 	@echo "  make down      - Stop all running Docker services"
 	@echo "  make clean     - Remove venv, containers, caches"
 	@echo "  make dev       - Run the FastAPI service in development mode"
+	@echo "  make migrate   - Run migrations"
 
 install:
 	python -m venv .venv
@@ -31,7 +32,7 @@ install:
 	$(VENV_PYTHON) -m pip install -r requirements.txt
 
 migrate:
-	$(YOYO) apply --batch ./migrations
+	$(VENV_PYTHON) -m app.migrate
 
 run:
 	@$(DOCKER_COMPOSE) up --build

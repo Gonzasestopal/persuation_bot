@@ -101,7 +101,7 @@ DATABASE_URL=postgresql://app:app@db:5432/app
 OPENAI_API_KEY=key
 LLM_PROVIDER=openai
 LLM_MODEL=gpt-4o
-
+DIFFICULTY=easy|medium
 ```
 
 ### Running the service
@@ -321,13 +321,13 @@ Update your `.env` file with this connection string under DATABASE_URL.
 
 From the repository root, build and tag the Docker image:
 ```
-docker build -t your-dockerhub-username/persuasion-bot:v1 .
+docker build -t gonzasestopale/persuasion-bot:v1 .
 ```
 
 Authenticate and push the image:
 ```
 docker login
-docker push your-dockerhub-username/persuasion-bot:v1
+docker push gonzasestopal/persuasion-bot:v1
 ```
 
 ### 3. Environment Configuration (PaaS)
@@ -343,12 +343,12 @@ DIFFICULTY=medium
 
 ### 4. Deployment
 - Deploy the pushed Docker image through your PaaS.
-
 - Verify logs and health checks to ensure the service is running correctly.
 
-
 ### 5. Database Migrations
-Run database migrations before starting the app:
-```bash
-make migrate DATABASE_URL=
+They are configured to run automatically on deployment or using github actions(soon).
+
+But you can run manually from your machine using:
+```
+make migrate
 ```

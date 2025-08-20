@@ -31,3 +31,8 @@ app.include_router(router)
 @app.exception_handler(ConfigError)
 async def config_error_handler(_: Request, exc: ConfigError):
     return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
+@app.get("/", tags=["health"])
+async def healthcheck():
+    return {"Welcome to debate BOT": "Visit /messages to start conversation"}

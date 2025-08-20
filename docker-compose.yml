@@ -12,8 +12,10 @@ services:
         condition: service_completed_successfully
   db:
     image: postgres:16
-    env_file:
-      - .env
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: supersecret
+      POSTGRES_DB: db
     ports: ["5432:5432"]
     volumes:
       - db_data:/var/lib/postgresql/data
@@ -33,7 +35,7 @@ services:
     volumes:
       - .:/app
     command: >
-      sh -c "yoyo apply --batch --database $$DATABASE_URL ./migrations"
+      sh -c "python -m app.migrate"
     restart: "no"
 
 volumes:

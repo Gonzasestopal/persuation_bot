@@ -70,3 +70,9 @@ def test_openai_history_limit_is_pairs_times_two(monkeypatch):
     stub_settings(monkeypatch, OPENAI_API_KEY="sk-test", HISTORY_LIMIT=5)
     llm = fx.get_llm(provider=Provider.OPENAI.value, model=OpenAIModels.GPT_4O.value)
     assert llm.max_history == 10
+
+
+def test_history_limit_zero_means_unlimited(monkeypatch):
+    stub_settings(monkeypatch, HISTORY_LIMIT=0)
+    llm = fx.get_llm(provider=Provider.OPENAI.value, model="gpt-4o")
+    assert llm.max_history is None

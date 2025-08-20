@@ -103,3 +103,29 @@ async def test_adapter_debate_raises_when_over_history():
         await adapter.debate(messages=msgs)
 
     assert "exceeds history limit" in str(e.value).lower()
+
+
+@pytest.mark.asyncio
+async def test_adapter_debate_allows_unlimited_when_history_limit_zero():
+    calls = []
+    client = FakeClient(calls)
+
+    adapter = OpenAIAdapter(max_history=None, api_key="sk-test", client=client, model="gpt-4o")
+
+    msgs = [
+        Message(role="user", message=f"u{i}") if i % 2 == 0 else Message(role="bot", message=f"b{i}")
+        for i in range(20)
+    ]
+
+    out = await adapter.debate(messages=msgs)
+
+    assert out == "FAKE-OUTPUT"
+    assert len(calls) == 1
+
+    sent = calls[0]
+    assert sent["model"] == "gpt-4o"
+
+    input_msgs = sent["input"]
+    assert input_msgs[0] == {"role": "system", "content": adapter.system_prompt}
+
+    assert len(input_msgs) == len(msgs) + 1

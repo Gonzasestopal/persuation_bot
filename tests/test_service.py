@@ -298,3 +298,54 @@ async def test_start_conversation_calls_llm_and_stores_reply():
     ])
 
     assert out["message"][-1].message == "Hello from LLM"
+
+
+@pytest.mark.asyncio
+async def test_continue_conversation_retrieves_all_messages(llm):
+    initial_message = Message(role="user", message="Topic: Dogs are human best friend, side:pro")
+    stance_message = Message(role="user", message="I will gladly take the PRO side that dogs are indeed human's best friend. Dogs offer unwavering loyalty and companionship, often providing emotional support and enhancing human well-being.")
+    user_message = Message(role="user", message="I firmly believe...")
+    bot_message = Message(role="bot", message="OK")
+    expired_time = datetime.now(timezone.utc) + timedelta(minutes=60)
+    conversation = Conversation(id=123, topic="X", side="con", expires_at=expired_time)
+    repo = SimpleNamespace(
+        create_conversation=AsyncMock(return_value=conversation),
+        get_conversation=AsyncMock(return_value=conversation),
+        touch_conversation=AsyncMock(),
+        add_message=AsyncMock(),
+        last_messages=AsyncMock(return_value=[
+            user_message,
+            bot_message,
+        ]),
+        all_messages=AsyncMock(return_value=[
+            initial_message,
+            stance_message,
+            user_message,
+            bot_message,
+        ]),
+    )
+
+    parser = Mock(side_effect=AssertionError("parser must not be called on continue"))
+    svc = MessageService(parser=parser, repo=repo, llm=llm, history_limit=1)
+
+    out = await svc.continue_conversation(message="I firmly believe...", conversation_id=123)
+
+    repo.get_conversation.assert_awaited_once_with(conversation_id=123)
+    repo.touch_conversation.assert_awaited_once_with(conversation_id=123)
+    repo.add_message.assert_has_awaits([
+        call(conversation_id=123, role="user", text="I firmly believe..."),
+        call(conversation_id=123, role="bot",  text="bot msg processing reply"),
+    ])
+    repo.last_messages.assert_has_awaits([
+        call(conversation_id=123, limit=2),
+    ])
+    repo.all_messages.assert_has_awaits([
+        call(conversation_id=123),
+    ])
+    assert out == {
+        "conversation_id": 123,
+        "message": [
+            user_message,
+            bot_message,
+        ],
+    }

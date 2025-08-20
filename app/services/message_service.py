@@ -54,8 +54,12 @@ class MessageService(object):
         await self.repo.touch_conversation(conversation_id=cid)
         await self.repo.add_message(conversation_id=cid, role="user", text=message)
 
-        history = await self.repo.last_messages(conversation_id=cid, limit=self.history_limit * 2)
-        reply = await self.llm.debate(history)
+        full_history = await self.repo.all_messages(conversation_id=cid)
+
+        reply = await self.llm.debate(
+            messages=full_history,
+            conversation=conversation,
+        )
         await self.repo.add_message(conversation_id=cid, role="bot", text=reply)
 
         return {

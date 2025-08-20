@@ -262,7 +262,7 @@ We target a **medium-resistance debate bot** and budget prompt length for latenc
 
 > [!IMPORTANT]
 > **Prompt budget:** keep input ≤ **2.5–3k tokens**.
-> **Structure**: system prompt + compact context header (Topic, Stance) + last **5 user + 5 bot turns**.
+> **Structure**: system prompt + last **every user bot messages**.
 > *(We will consider a summary for longer conversations)*
 > **Output cap:** aim 80–120 tokens (hard cap 400).
 
@@ -278,17 +278,16 @@ Even long (1k–1.5k token) answers usually <20s.
 
 **Building blocks**
 - **System (S):** ~120–180 tokens
-- **Header (H, no summary):** ~45–60 tokens
 - **One pair (P = user+bot, with wrapper):** ~52–73 tokens
 
 **Totals**
-`Total(N pairs) = S + H + N·P`
+`Total(N pairs) = S + N·P`
 
-- **1 pair:** `120–180 + 45–60 + 1·(52–73) = ~217–313`
-- **5 pairs (runtime soft cap):** `= ~425–605`
-- **37 pairs (worst-case safe under 3k):** `= ~2,089–2,941`
+- **1 pair:** `120–180 + 52–73 = ~172–253`
+- **5 pairs (runtime soft cap):** `= ~380–545`
+- **37 pairs (worst-case safe under 3k):** `= ~2,044–2,881`
 - **42 pairs (Mid-target near 3k):**
- gives ~**2,992** mid-case
+ gives ~**2,750** mid-case
   *(Note: worst-case at N=45 can exceed 3k; we will raise error for now.)*
 
 ### Conclusion
@@ -297,3 +296,5 @@ Given our strict **<30s** response requirement, **GPT-4o** is the safer default:
 **Claude 3.5 Opus** is excluded due to slower generation, risking SLA breaches without streaming/caps.
 
 > Note: OpenAI and Anthropic have different tokenizers; counts vary slightly. We use the same budgeting pattern and enforce a ≤3k input guard at send time.
+
+> Note: For conversations that push the input context beyond 3k tokens, we will need to introduce a running summary or trimming strategy to keep requests within budget.

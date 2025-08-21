@@ -41,7 +41,7 @@ dev:
 	$(UVICORN) app.main:app --reload --port 8000
 
 test:
-	python -m pytest -q
+	python -m pytest --cov=app --cov-report=term-missing
 
 down:
 ifeq ($(OS),Windows_NT)

@@ -1,22 +1,24 @@
 import pytest
 
+from app.domain.exceptions import (InvalidContinuationMessage,
+                                   InvalidStartMessage)
 from app.domain.parser import parse_topic_side
 
 
 def test_parser_empty_message():
-    with pytest.raises(ValueError, match="must not be empty"):
+    with pytest.raises(InvalidStartMessage, match="must not be empty"):
         parse_topic_side("")
 
 def test_parser_missing_topic():
-    with pytest.raises(ValueError, match="topic is missing"):
+    with pytest.raises(InvalidStartMessage, match="topic is missing"):
         parse_topic_side("Side: PRO")
 
 def test_parser_missing_side():
-    with pytest.raises(ValueError, match="side is missing"):
+    with pytest.raises(InvalidStartMessage, match="side is missing"):
         parse_topic_side("Topic: Dogs are great")
 
 def test_parser_unsupported_side():
-    with pytest.raises(ValueError, match="must be 'pro' or 'con'"):
+    with pytest.raises(InvalidStartMessage, match="must be 'pro' or 'con'"):
         parse_topic_side("Topic: Dogs are great, Side: maybe")
 
 def test_parser_valid_side_and_topic_mixed_case():
@@ -43,4 +45,5 @@ def test_parser_reversed_order_and_punctuation():
     assert t == topic
     assert s == "con"
     assert t == topic
+    assert s == "con"
     assert s == "con"

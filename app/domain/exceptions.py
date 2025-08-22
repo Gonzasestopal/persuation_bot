@@ -47,3 +47,4 @@ class LLMTimeout(DomainError):               # 503
 
 class LLMServiceError(DomainError):          # 502 or 503 (choose)
     code = "llm_service_error"
+    code = "llm_service_error"

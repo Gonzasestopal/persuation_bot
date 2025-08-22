@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.routes import get_service
+from app.domain.exceptions import ConversationNotFound, InvalidStartMessage
 from app.main import app
 from app.settings import settings
 
@@ -20,15 +21,15 @@ class FakeOK:
 
 class FakeNotFound:
     async def handle(self, **_):
-        raise KeyError()
+        raise ConversationNotFound("conversation not found")
 
 class FakeMissingMessage:
     async def handle(self, **_):
-        raise ValueError("message must not be empty.")
+        raise InvalidStartMessage("message must not be empty.")
 
 class FakeBadInput:
     async def handle(self, **_):
-        raise ValueError("conversation_id must be null when starting")
+        raise InvalidStartMessage("conversation_id must be null when starting")
 
 class FakeSlow:
     async def handle(self, **_):

@@ -4,6 +4,9 @@ from unittest.mock import AsyncMock, Mock, call
 
 import pytest
 
+from app.domain.exceptions import (ConversationExpired, ConversationNotFound,
+                                   InvalidContinuationMessage,
+                                   InvalidStartMessage)
 from app.domain.models import Conversation, Message
 from app.services.message_service import MessageService
 
@@ -72,10 +75,10 @@ async def test_continue_conversation(repo, llm):
 @pytest.mark.asyncio
 async def test_new_conversation_invalid_message(repo, llm):
     parser = Mock()
-    parser.side_effect = ValueError("message must contain Topic: and Side: fields")
+    parser.side_effect = InvalidStartMessage("message must contain Topic: and Side: fields")
     service = MessageService(parser=parser, repo=repo, llm=llm)
     service.start_conversation = AsyncMock()
-    with pytest.raises(ValueError, match="message must contain Topic: and Side: fields"):
+    with pytest.raises(InvalidStartMessage, match="message must contain Topic: and Side: fields"):
         await service.handle(message="Message missing params")
 
     service.start_conversation.assert_not_called()
@@ -86,7 +89,7 @@ async def test_continue_conversation_new_topic_or_side(repo, llm):
     parser = Mock()
     service = MessageService(parser=parser, repo=repo, llm=llm)
     service.continue_conversation = AsyncMock()
-    with pytest.raises(ValueError, match="topic/side must not be provided when continuing a conversation"):
+    with pytest.raises(InvalidContinuationMessage, match="topic/side must not be provided when continuing a conversation"):
         await service.handle(message="Topic: X, Side: PRO", conversation_id=123)
 
     service.continue_conversation.assert_not_called()
@@ -96,7 +99,7 @@ async def test_continue_conversation_new_topic_or_side(repo, llm):
 async def test_continue_rejects_topic_marker(repo, llm):
     parser = Mock()
     service = MessageService(parser=parser, repo=repo, llm=llm)
-    with pytest.raises(ValueError, match="must not be provided"):
+    with pytest.raises(InvalidContinuationMessage, match="must not be provided"):
         await service.handle(message="Topic: Cats. anyway...", conversation_id=1)
 
 
@@ -104,7 +107,7 @@ async def test_continue_rejects_topic_marker(repo, llm):
 async def test_continue_rejects_side_marker(repo, llm):
     parser = Mock()
     service = MessageService(parser=parser, repo=repo, llm=llm)
-    with pytest.raises(ValueError, match="must not be provided"):
+    with pytest.raises(InvalidContinuationMessage, match="must not be provided"):
         await service.handle(message="Side: PRO. I think...", conversation_id=1)
 
 
@@ -121,7 +124,7 @@ async def test_continue_allows_normal_text_and_no_parser(repo, llm):
 async def test_continue_with_empty_message(repo, llm):
     parser = Mock(side_effect=AssertionError("parser must not be called"))
     service = MessageService(parser=parser, repo=repo, llm=llm)
-    with pytest.raises(ValueError, match="must not be empty"):
+    with pytest.raises(InvalidContinuationMessage, match="must not be empty"):
         await service.handle(message="", conversation_id=7)
 
 
@@ -213,7 +216,7 @@ async def test_continue_conversation_unknown_id_raises_keyerror(llm):
     parser = Mock()
     svc = MessageService(parser=parser, repo=repo, llm=llm)
 
-    with pytest.raises(KeyError, match="not found"):
+    with pytest.raises(ConversationNotFound, match="not found"):
         await svc.continue_conversation(message="hi", conversation_id=9999)
 
     repo.get_conversation.assert_awaited_once_with(conversation_id=9999)
@@ -277,7 +280,7 @@ async def test_continue_conversation_expired(repo, llm):
 
     svc = MessageService(parser=Mock(), repo=repo, llm=llm)
 
-    with pytest.raises(KeyError, match="expired"):
+    with pytest.raises(ConversationExpired, match="expired"):
         await svc.continue_conversation("hello", 123)
 
     repo.touch_conversation.assert_not_called()

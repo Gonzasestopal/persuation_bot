@@ -65,6 +65,8 @@ class MessageService(object):
 
         reply = await self.concession_service.analyze_conversation(
             messages=full_history,
+            side=conversation.side,
+            conversation_id=conversation_id,
         )
 
         await self.repo.add_message(conversation_id=cid, role="bot", text=reply)

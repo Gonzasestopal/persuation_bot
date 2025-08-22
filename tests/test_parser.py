@@ -1,8 +1,10 @@
 import pytest
+
 from app.domain.parser import parse_topic_side
 
+
 def test_parser_empty_message():
-    with pytest.raises(ValueError, match="contain Topic: and Side:"):
+    with pytest.raises(ValueError, match="must not be empty"):
         parse_topic_side("")
 
 def test_parser_missing_topic():
@@ -38,5 +40,7 @@ def test_parser_lowercase_input():
 def test_parser_reversed_order_and_punctuation():
     topic = "Dogs are human best friends"
     t, s = parse_topic_side(f"Side: CON. Topic: {topic}")
+    assert t == topic
+    assert s == "con"
     assert t == topic
     assert s == "con"

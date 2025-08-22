@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from app.domain.consession_policy import DebateState
+from app.domain.concession_policy import DebateState
 from app.services.concession_service import ConcessionService
 
 

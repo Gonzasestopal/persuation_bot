@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.domain.consession_policy import DebateState
+from app.domain.concession_policy import DebateState
 from app.domain.errors import ConversationExpired, ConversationNotFound
 from app.domain.parser import assert_no_topic_or_side_markers
 from app.domain.ports.llm import LLMPort
@@ -14,18 +14,16 @@ class MessageService(object):
         self,
         parser,
         repo: MessageRepoPort,
-        llm: LLMPort,
-        history_limit=5,
         concession_service: Optional[ConcessionService] = None,
+        llm: Optional[LLMPort] = None,
+        history_limit=5,
     ):
         self.parser = parser
         self.repo = repo
         self.history_limit = history_limit
         self.llm = llm
-        self.debate_state = DebateState()
         self.concession_service = concession_service or ConcessionService(
-            debate_state=self.debate_state,
-            llm=self.llm,
+            llm=llm,
         )
 
     async def handle(self, message: str, conversation_id: Optional[int] = None):

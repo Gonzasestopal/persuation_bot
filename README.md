@@ -166,6 +166,15 @@ POST /messages
 }
 ```
 
+**Mapped Errors**
+```
+{ "detail": "message must not be empty." }                                       # 422 Unprocessable Entity
+{ "detail": "message must contain topic and side for starting a conversation." } # 422 Unprocessable Entity
+{ "detail": "conversation_id must be null when starting a conversation" }        # 422 Unprocessable Entity
+{ "detail": "conversation_id not found or expired" }                             # 404 Not Found
+{ "detail": "response generation timed out" }                                    # 503 Bad Gateway
+````
+
 ---
 
 ## Non Functional Requirements

@@ -58,6 +58,9 @@ def get_llm(
 
 
 def make_openai():
+    if not settings.OPENAI_API_KEY:
+        raise ConfigError("OPENAI_API_KEY is required for provider=openai")
+
     return OpenAIAdapter(
         api_key=settings.OPENAI_API_KEY,
         model=settings.LLM_MODEL,          # e.g., "gpt-4o"
@@ -68,6 +71,9 @@ def make_openai():
 
 
 def make_claude():
+    if not settings.ANTHROPIC_API_KEY:
+        raise ConfigError("ANTHROPIC_API_KEY is required for provider=anthropic")
+
     return AnthropicAdapter(
         api_key=settings.ANTHROPIC_API_KEY,
         model=AnthropicModels.CLAUDE_35,

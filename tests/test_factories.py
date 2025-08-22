@@ -20,6 +20,11 @@ def stub_settings(monkeypatch, **overrides):
         HISTORY_LIMIT=5,
         REQUEST_TIMEOUT_S=30,
         DIFFICULTY='easy',
+        PRIMARY_LLM='openai',
+        SECONDARY_LLM='anthropic',
+        LLM_MODEL='gpt-4o',
+        LLM_MAX_OUTPUT_TOKENS=120,
+        LLM_PER_PROVIDER_TIMEOUT_S=25,
     )
 
     # let overrides replace defaults cleanly
@@ -105,12 +110,14 @@ def test_set_debate_bot_difficulty_easy(monkeypatch):
     assert a.difficulty == Difficulty.MEDIUM
 
 
-def test_assert_is_openaiadapter():
+def test_assert_is_openaiadapter(monkeypatch):
+    stub_settings(monkeypatch, OPENAI_API_KEY="sk-test")
     llm = fx.make_openai()
     assert isinstance(llm, OpenAIAdapter)
 
 
 def test_assert_is_anthropic(monkeypatch):
+    stub_settings(monkeypatch, ANTHROPIC_API_KEY="sk-test")
     llm = fx.make_claude()
     assert isinstance(llm, AnthropicAdapter)
 

@@ -64,7 +64,6 @@ def make_openai():
     return OpenAIAdapter(
         api_key=settings.OPENAI_API_KEY,
         model=settings.LLM_MODEL,          # e.g., "gpt-4o"
-        temperature=settings.LLM_TEMPERATURE,
         max_output_tokens=settings.LLM_MAX_OUTPUT_TOKENS,
         difficulty=settings.DIFFICULTY,
     )
@@ -77,7 +76,7 @@ def make_claude():
     return AnthropicAdapter(
         api_key=settings.ANTHROPIC_API_KEY,
         model=AnthropicModels.CLAUDE_35,
-        temperature=settings.LLM_TEMPERATURE,
+
         max_output_tokens=settings.LLM_MAX_OUTPUT_TOKENS,  # your existing budget
         difficulty=settings.DIFFICULTY,
     )

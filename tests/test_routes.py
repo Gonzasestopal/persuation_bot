@@ -3,6 +3,8 @@ import time
 
 import pytest
 
+from app.factories import get_service
+from app.main import app
 from app.settings import settings
 
 
@@ -89,3 +91,46 @@ def test_returns_503_on_timeout(client, monkeypatch):
     assert r.json().get("detail") == "response generation timed out"
 
     # (Restore is automatic after test because monkeypatch patched the object attribute for test scope)
+
+
+def _temporarily_remove_di_override():
+    """Temporarily remove any DI override on get_service for this test."""
+    had_override = get_service in app.dependency_overrides
+    saved = app.dependency_overrides.get(get_service)
+    if had_override:
+        del app.dependency_overrides[get_service]
+    return had_override, saved
+
+
+def _restore_di_override(had_override, saved):
+    if had_override:
+        app.dependency_overrides[get_service] = saved
+
+
+def test_returns_500_on_missing_api_key(client, monkeypatch):
+    """
+    When provider API keys are missing/misconfigured, the app should surface a 500 ConfigError.
+    This test clears provider keys and ensures we use the *real factory* (no DI override).
+    """
+    # Ensure we are not using a pre-built service from conftest
+    had_override, saved = _temporarily_remove_di_override()
+    try:
+        # Clear env + settings for both providers so fallback can't succeed
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.setattr(settings, "OPENAI_API_KEY", None, raising=False)
+        monkeypatch.setattr(settings, "ANTHROPIC_API_KEY", None, raising=False)
+
+        # If you use a fallback adapter, ensure it tries OpenAI first (or either),
+        # but both should be missing anyway:
+        monkeypatch.setattr(settings, "PRIMARY_LLM", "openai", raising=False)
+        monkeypatch.setattr(settings, "SECONDARY_LLM", "claude", raising=False)
+
+        r = client.post("/messages", json={"conversation_id": None, "message": "Topic: X. Side: PRO."})
+        assert r.status_code == 500, r.text
+
+        # Be flexible on the message, but it should mention config / api key.
+        detail = r.json().get("detail", "").lower()
+        assert ("config" in detail or "api_key" in detail or "misconfigured" in detail), detail
+    finally:
+        _restore_di_override(had_override, saved)

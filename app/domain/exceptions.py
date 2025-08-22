@@ -1,3 +1,7 @@
+from dataclasses import dataclass
+
+
+@dataclass
 class DomainError(Exception):
     """Base class for all domain-level errors.
 
@@ -6,7 +10,8 @@ class DomainError(Exception):
     Raise subclasses of this in services, repositories, or adapters
     when the problem is related to business rules or domain state.
     """
-    pass
+    message: str
+    code: str = "domain_error"
 
 
 class ConfigError(Exception):
@@ -16,7 +21,24 @@ class ConfigError(Exception):
     or other critical configuration values that prevent the app from
     starting or operating correctly.
     """
-    pass
+    code = "missing or misconfigured setting"
+
+
+# 4xx
+class InvalidStartMessage(DomainError):      # 422
+    code = "invalid_start_message"
+
+
+class InvalidContinuationMessage(DomainError):  # 422
+    code = "invalid_continuation_message"
+
+
+class ConversationNotFound(DomainError):     # 404
+    code = "conversation_not_found"
+
+
+class ConversationExpired(DomainError):      # 404
+    code = "conversation_expired"
 
 
 class LLMTimeout(DomainError):               # 503

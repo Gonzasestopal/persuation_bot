@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from psycopg_pool import AsyncConnectionPool
 
+from app.api.errors import register_exception_handlers
 from app.api.routes import router
 from app.domain.exceptions import ConfigError
 from app.settings import settings
@@ -37,10 +38,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(router)
 
-
-@app.exception_handler(ConfigError)
-async def config_error_handler(_: Request, exc: ConfigError):
-    return JSONResponse(status_code=422, content={"detail": str(exc)})
+register_exception_handlers(app)
 
 
 @app.get("/", tags=["health"])

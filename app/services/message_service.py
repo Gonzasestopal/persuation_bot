@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
 from typing import Optional
 
+from app.domain.consession_policy import DebateState
 from app.domain.errors import ConversationExpired, ConversationNotFound
 from app.domain.parser import assert_no_topic_or_side_markers
 from app.domain.ports.llm import LLMPort
 from app.domain.ports.message_repo import MessageRepoPort
+from app.services.concession_service import ConcessionService
 
 
 class MessageService(object):
@@ -14,11 +16,17 @@ class MessageService(object):
         repo: MessageRepoPort,
         llm: LLMPort,
         history_limit=5,
+        concession_service: Optional[ConcessionService] = None,
     ):
         self.parser = parser
         self.repo = repo
         self.history_limit = history_limit
         self.llm = llm
+        self.debate_state = DebateState()
+        self.concession_service = concession_service or ConcessionService(
+            debate_state=self.debate_state,
+            llm=self.llm,
+        )
 
     async def handle(self, message: str, conversation_id: Optional[int] = None):
         if conversation_id is None:
@@ -57,9 +65,10 @@ class MessageService(object):
 
         full_history = await self.repo.all_messages(conversation_id=cid)
 
-        reply = await self.llm.debate(
+        reply = await self.concession_service.analyze_conversation(
             messages=full_history,
         )
+
         await self.repo.add_message(conversation_id=cid, role="bot", text=reply)
 
         return {

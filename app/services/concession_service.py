@@ -14,12 +14,16 @@ class ConcessionService:
         self.debate_state = debate_state
         self.llm = llm
 
-    def analyze_conversation(self, messages: List[Message]) -> DebateState:
+    async def analyze_conversation(self, messages: List[Message]) -> DebateState:
         """
         Analyzes the whole conversation.
         Currently returns True unconditionally (placeholder).
         Replace with real logic that inspects debate_state.
         """
         # TODO: Add logic to inspect self.debate_state.messages[-2:]
+        reply = self.llm.debate(messages=messages)
+
+        self.debate_state.assistant_turns += 1
+        self.debate_state.positive_judgements += 1
 
         return self.debate_state

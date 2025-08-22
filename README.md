@@ -15,6 +15,7 @@ An LLM-based chatbot that takes in messages from a user, processes them, and gen
 11. [Production Considerations](#production-considerations)
 12. [LLM](#llm)
 13. [Deployment Guide](#deployment-guide)
+14. [Testing](#testing)
 
 ---
 
@@ -89,8 +90,9 @@ persuasion_bot/
 - Docker (required) → [Install Guide](https://docs.docker.com/engine/install/)
 - GNU Make (required) → [Install Guide](https://www.gnu.org/software/make/)
 
-- Python & pip (optional, for local dev/tests)
-- PostgreSQL (optional, for local dev)
+- Python & pip (optional, for local dev/tests) →[Install Guide](https://wiki.python.org/moin/BeginnersGuide/Download)
+- Virtualenv(optional, for local dev/tests) → [Install Guide](https://virtualenv.pypa.io/en/latest/installation.html)
+- PostgreSQL (optional, for local dev)  → [Install Guide](https://www.postgresql.org/docs/current/tutorial-install.html)
 
 ### Clone Repository
 ```bash
@@ -251,5 +253,24 @@ We support **OpenAI GPT-4o** and **Anthropic Claude 3.5**.
    ```bash
    make migrate
    ```
+
+</details>
+
+---
+
+
+<details>
+  <summary> 🧪 Testing  (click to expand) </summary>
+
+### Install Dependencies
+Ensure all required dependencies are installed before running the test suite:
+```bash
+make install
+```
+### Run Tests with Coverage
+Execute the full test suite with coverage reporting:
+```bash
+make test
+```
 
 </details>

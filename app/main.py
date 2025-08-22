@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from psycopg_pool import AsyncConnectionPool
 
-from app.api.messages import router
+from app.api.routes import router
 from app.domain.exceptions import ConfigError
 from app.settings import settings
 

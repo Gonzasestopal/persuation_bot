@@ -1,10 +1,10 @@
 import asyncio
-import pytest
 
+import pytest
 from fastapi.testclient import TestClient
 
+from app.api.routes import get_service
 from app.main import app
-from app.api.messages import get_service
 from app.settings import settings
 
 client = TestClient(app)

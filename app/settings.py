@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     LLM_MAX_OUTPUT_TOKENS: int = 120
     LLM_PER_PROVIDER_TIMEOUT_S: float = 12.0
 
+    MIN_ASSISTANT_TURNS_BEFORE_VERDICT: int = 5
+    REQUIRED_POSITIVE_JUDGEMENTS: int = 2
+    MAX_OUTPUT_TOKENS: int
+
     class Config:
         env_file = ".env"
 

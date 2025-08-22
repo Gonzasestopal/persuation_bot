@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, Mock, call
 import pytest
 
 from app.domain.errors import (ConversationExpired, ConversationNotFound,
-                                   InvalidContinuationMessage,
-                                   InvalidStartMessage)
+                               InvalidContinuationMessage, InvalidStartMessage)
 from app.domain.models import Conversation, Message
+from app.services.concession_service import ConcessionService
 from app.services.message_service import MessageService
 
 
@@ -375,3 +375,13 @@ async def test_continue_conversation_retrieves_all_messages(llm):
             bot_message,
         ],
     }
+
+
+@pytest.mark.asyncio
+async def test_continue_conversation_calls_concession_service(repo, llm):
+    parser = Mock()
+    concession_service = Mock(spec=ConcessionService)
+    messages = await repo.all_messages()
+    svc = MessageService(parser=parser, repo=repo, llm=llm, concession_service=concession_service)
+    out = await svc.continue_conversation(message="I firmly believe...", conversation_id=123)
+    concession_service.analyze_conversation.assert_awaited_once_with(messages=messages)

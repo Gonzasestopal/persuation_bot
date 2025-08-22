@@ -17,14 +17,12 @@ class FallbackLLM(LLMPort):
         *,
         per_provider_timeout_s: float = 15.0,
         mode: str = "sequential",   # "sequential" | "hedged"
-        hedge_delay_s: float = 0.5, # only used in hedged mode
         logger: Optional[Callable[[str], None]] = None,
     ) -> None:
         self.primary = primary
         self.secondary = secondary
         self.timeout = per_provider_timeout_s
         self.mode = mode
-        self.hedge_delay_s = hedge_delay_s
         self.log = logger or (lambda _msg: None)
 
     # ---- Public API expected by your service ----

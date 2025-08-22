@@ -7,6 +7,7 @@ from app.adapters.llm.anthropic import AnthropicAdapter
 from app.adapters.llm.constants import (AnthropicModels, Difficulty,
                                         OpenAIModels, Provider)
 from app.adapters.llm.dummy import DummyLLMAdapter
+from app.adapters.llm.fallback import FallbackLLM
 from app.adapters.llm.openai import OpenAIAdapter
 from app.domain.exceptions import ConfigError
 from app.domain.parser import parse_topic_side
@@ -56,13 +57,51 @@ def get_llm(
     return DummyLLMAdapter()
 
 
+def make_openai():
+    return OpenAIAdapter(
+        api_key=settings.OPENAI_API_KEY,
+        model=settings.LLM_MODEL,          # e.g., "gpt-4o"
+        temperature=settings.LLM_TEMPERATURE,
+        max_output_tokens=settings.LLM_MAX_OUTPUT_TOKENS,
+        difficulty=settings.DIFFICULTY,
+    )
+
+
+def make_claude():
+    return AnthropicAdapter(
+        api_key=settings.ANTHROPIC_API_KEY,
+        model=AnthropicModels.CLAUDE_35,
+        temperature=settings.LLM_TEMPERATURE,
+        max_output_tokens=settings.LLM_MAX_OUTPUT_TOKENS,  # your existing budget
+        difficulty=settings.DIFFICULTY,
+    )
+
+
+def make_fallback_llm():
+    # Choose primary/secondary from settings
+    primary_name = (settings.PRIMARY_LLM or "openai").lower()
+    secondary_name = (settings.SECONDARY_LLM or "claude").lower()
+
+    provider_map = {
+        "openai": make_openai,
+        "claude": make_claude,
+        "anthropic": make_claude,  # alias
+    }
+
+    primary = provider_map[primary_name]()
+    secondary = provider_map[secondary_name]()
+
+    return FallbackLLM(
+        primary=primary,
+        secondary=secondary,
+        per_provider_timeout_s=settings.LLM_PER_PROVIDER_TIMEOUT_S,  # e.g., 12
+        mode="sequential",
+        logger=lambda msg: None,                                     # plug logger if you want
+    )
+
+
 def get_service(
     repo=Depends(get_repo),
-    llm=Depends(partial(
-        get_llm,
-        provider=settings.LLM_PROVIDER,
-        model=settings.LLM_MODEL,
-    ))
+    llm=Depends(make_fallback_llm)
 ) -> MessageService:
-    return MessageService(parser=parse_topic_side, repo=repo, llm=llm)
     return MessageService(parser=parse_topic_side, repo=repo, llm=llm)

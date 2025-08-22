@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 import app.factories as fx
+from app.adapters.llm.anthropic import AnthropicAdapter
 from app.adapters.llm.constants import Difficulty, OpenAIModels, Provider
 from app.adapters.llm.dummy import DummyLLMAdapter
 from app.adapters.llm.fallback import FallbackLLM
@@ -104,13 +105,13 @@ def test_set_debate_bot_difficulty_easy(monkeypatch):
 
 
 def test_assert_is_openaiadapter():
-    llm = fx.make_claude()
+    llm = fx.make_openai()
     assert isinstance(llm, OpenAIAdapter)
 
 
 def test_assert_is_anthropic(monkeypatch):
     llm = fx.make_claude()
-    assert isinstance(llm, OpenAIAdapter)
+    assert isinstance(llm, AnthropicAdapter)
 
 
 def test_assert_is_fallback(monkeypatch):

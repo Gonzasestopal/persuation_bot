@@ -1,12 +1,10 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 from psycopg_pool import AsyncConnectionPool
 
 from app.api.errors import register_exception_handlers
 from app.api.routes import router
-from app.domain.exceptions import ConfigError
 from app.settings import settings
 
 

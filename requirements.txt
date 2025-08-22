@@ -12,3 +12,6 @@ openai
 python-dotenv
 pytest-cov
 anthropic
+huggingface_hub
+torch
+transformers

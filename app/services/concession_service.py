@@ -141,8 +141,8 @@ class ConcessionService:
             "concession": concession,
             "reason": reason,
             "scores": scores,
-            "user_text_sample": user_txt[:120],
-            "bot_text_sample": bot_txt[:120],
+            "user_text_sample": user_txt,
+            "bot_text_sample": bot_txt,
         }
 
     def _latest_idx(self, conv: List[dict], role: str, *, before_idx: Optional[int] = None) -> Optional[int]:

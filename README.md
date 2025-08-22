@@ -172,6 +172,7 @@ POST /messages
 { "detail": "message must contain topic and side for starting a conversation." } # 422 Unprocessable Entity
 { "detail": "conversation_id must be null when starting a conversation" }        # 422 Unprocessable Entity
 { "detail": "conversation_id not found or expired" }                             # 404 Not Found
+{ "detail: "anthropic_api_key is required"}                                      # 500 Internal Server Error
 { "detail": "response generation timed out" }                                    # 503 Bad Gateway
 ````
 

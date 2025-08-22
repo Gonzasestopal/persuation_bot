@@ -3,6 +3,7 @@ from enum import Enum
 
 class Provider(str, Enum):
     OPENAI = "openai"
+    ANTHROPIC = 'anthropic'
 
 
 class Difficulty(str, Enum):
@@ -13,6 +14,10 @@ class Difficulty(str, Enum):
 class OpenAIModels(str, Enum):
     GPT_4O = "gpt-4o"
     GPT_4O_MINI = "gpt-4o-mini"
+
+
+class AnthropicModels(str, Enum):
+    CLAUDE_35 = "claude-3-5-sonnet-latest"
 
 
 SYSTEM_PROMPT = (

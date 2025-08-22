@@ -11,3 +11,4 @@ psycopg_pool
 openai
 python-dotenv
 pytest-cov
+anthropic

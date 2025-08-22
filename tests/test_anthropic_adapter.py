@@ -69,7 +69,7 @@ async def test_adapter_generate_builds_prompt_and_returns_output():
     # Anthropic params
     assert sent["model"] == "claude-3-5-sonnet-latest"
     assert sent["temperature"] == 0.3
-    assert sent["max_output_tokens"] == 120
+    assert sent["max_tokens"] == 120
 
     # System goes in top-level 'system'
     assert sent["system"] == adapter.system_prompt
@@ -114,7 +114,7 @@ async def test_adapter_debate_maps_roles_and_respects_history():
     sent = calls[0]
     assert sent["model"] == "claude-3-5-sonnet-latest"
     assert sent["temperature"] == 0.2
-    assert sent["max_output_tokens"] == 90
+    assert sent["max_tokens"] == 90
 
     # System prompt is top-level
     assert sent["system"] == adapter.system_prompt

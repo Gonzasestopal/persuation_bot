@@ -56,12 +56,13 @@ class ConcessionService:
         self, messages: List[Message],
         side: Stance,
         conversation_id: int,
+        topic: str,
     ) -> Dict[str, any]:
         stance = Stance(side.upper())  # "PRO" or "CON"
 
         state = self._get_state(conversation_id)
         mapped = self._map_history(messages)
-        last_two_eval = self.judge_last_two_messages(conversation=mapped, stance=stance)
+        last_two_eval = self.judge_last_two_messages(conversation=mapped, stance=stance, topic=topic)
 
         print(last_two_eval)
 
@@ -97,21 +98,43 @@ class ConcessionService:
         sents = [s for s in sents if not re.search(r'\?\s*$', s)]
         return " ".join(sents) if sents else text
 
-    def _alignment_and_scores(self, stance: Stance, bot_text: str, user_text: str) -> Tuple[str, Dict[str, float]]:
+    def _alignment_and_scores_topic_aware(
+        self,
+        bot_text: str,
+        user_text: str,
+        bot_stance: Stance,
+        topic: str,
+    ) -> Tuple[str, Dict[str, float], Dict[str, float]]:
+        """
+        Returns:
+        align: 'OPPOSITE' | 'SAME' | 'UNKNOWN'  (user vs bot's stance)
+        pair_scores: best of {user->bot, bot->user}
+        thesis_scores: NLI(user_text, bot_thesis)
+        """
         bot_clean = self._drop_questions(bot_text)
-        scores_u2b = self.nli.score(user_text, bot_clean)
-        scores_b2u = self.nli.score(bot_clean, user_text)
-        chosen = scores_u2b if max(scores_u2b["entailment"], scores_u2b["contradiction"]) >= max(scores_b2u["entailment"], scores_b2u["contradiction"]) else scores_b2u
-        ent, contr = chosen["entailment"], chosen["contradiction"]
+
+        # Pairwise (for strength / concession)
+        s_u2b = self.nli.score(user_text, bot_clean)
+        s_b2u = self.nli.score(bot_clean, user_text)
+        pair_scores = s_u2b if max(s_u2b["entailment"], s_u2b["contradiction"]) >= max(s_b2u["entailment"], s_b2u["contradiction"]) else s_b2u
+
+        # Topic+stance thesis
+        thesis = self._bot_thesis(topic, bot_stance)
+        thesis_scores = self.nli.score(user_text, thesis)
+
+        ent = thesis_scores["entailment"]
+        contr = thesis_scores["contradiction"]
+
         if contr >= self.contradiction_threshold and contr > ent:
-            align = "OPPOSITE"
+            align = "OPPOSITE"   # user argues against the bot's stance
         elif ent >= self.entailment_threshold and ent > contr:
-            align = "SAME"
+            align = "SAME"       # user supports the bot's stance
         else:
             align = "UNKNOWN"
-        return align, chosen
 
-    def judge_last_two_messages(self, conversation: List[dict], stance: Stance) -> Optional[Dict[str, any]]:
+        return align, pair_scores, thesis_scores
+
+    def judge_last_two_messages(self, conversation: List[dict], stance: Stance, topic: str) -> Optional[Dict[str, any]]:
         if not conversation:
             return None
         # latest user
@@ -125,24 +148,44 @@ class ConcessionService:
         user_txt = conversation[user_idx]["content"]
         bot_txt  = conversation[bot_idx]["content"]
 
-        align, scores = self._alignment_and_scores(stance, bot_txt, user_txt)
+        align, pair_scores, thesis_scores = self._alignment_and_scores_topic_aware(
+            bot_txt, user_txt, stance, topic
+        )
 
-        if align == "OPPOSITE":
-            concession = scores["contradiction"] >= self.contradiction_threshold
-            reason = "strong_opposition" if concession else "weak_opposition"
-        elif align == "SAME":
+        # Decide alignment
+        ent, contr = thesis_scores["entailment"], thesis_scores["contradiction"]
+
+        if contr >= self.contradiction_threshold and contr > ent:
+            align = "OPPOSITE"
+            concession = True
+            reason = "thesis_opposition"
+        elif ent >= self.entailment_threshold and ent > contr:
+            align = "SAME"
             concession, reason = False, "same_stance"
         else:
-            concession, reason = False, "underdetermined"
+            # fallback: if thesis is neutral, check pairwise contradiction
+            if pair_scores["contradiction"] >= self.contradiction_threshold:
+                align = "OPPOSITE"
+                concession = True
+                reason = "pairwise_opposition"
+            else:
+                align = "UNKNOWN"
+                concession, reason = False, "underdetermined"
 
         return {
             "passed_stance": stance.value,
             "alignment": align,
             "concession": concession,
-            "reason": reason,
-            "scores": scores,
+            "reason": reason,   # still keep primary
+            "reasons": [reason] + (
+                ["pairwise_opposition"] if reason == "thesis_opposition"
+                and pair_scores["contradiction"] >= self.contradiction_threshold else []
+            ),
+            "scores": pair_scores,
+            "thesis_scores": thesis_scores,
             "user_text_sample": user_txt,
             "bot_text_sample": bot_txt,
+            "topic": topic,
         }
 
     def _latest_idx(self, conv: List[dict], role: str, *, before_idx: Optional[int] = None) -> Optional[int]:
@@ -166,3 +209,10 @@ class ConcessionService:
     def _is_positive_judgment(self, eval_payload: Optional[dict]) -> bool:
         # Keep this definition tight; don’t compare to stance.value.
         return bool(eval_payload and eval_payload.get("concession"))
+
+    def _bot_thesis(self, topic: str, bot_stance: Stance) -> str:
+        t = topic.strip().rstrip(".")
+        if bot_stance == Stance.PRO:
+            return f"{t}."
+        else:  # bot is CON
+            return f"It is not true that {t}."

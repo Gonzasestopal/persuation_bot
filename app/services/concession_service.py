@@ -148,14 +148,18 @@ class ConcessionService:
         user_txt = conversation[user_idx]["content"]
         bot_txt  = conversation[bot_idx]["content"]
 
+
         align, pair_scores, thesis_scores = self._alignment_and_scores_topic_aware(
             bot_txt, user_txt, stance, topic
         )
 
+        pair_ok = self.nli_confident(pair_scores) and len(user_txt) >= 30
+        thesis_ok = self.nli_confident(thesis_scores)
+
         # Decide alignment
         ent, contr = thesis_scores["entailment"], thesis_scores["contradiction"]
 
-        if contr >= self.contradiction_threshold and contr > ent:
+        if contr >= self.contradiction_threshold and contr > ent and thesis_ok:
             align = "OPPOSITE"
             concession = True
             reason = "thesis_opposition"
@@ -164,7 +168,7 @@ class ConcessionService:
             concession, reason = False, "same_stance"
         else:
             # fallback: if thesis is neutral, check pairwise contradiction
-            if pair_scores["contradiction"] >= self.contradiction_threshold:
+            if pair_scores["contradiction"] >= self.contradiction_threshold and pair_ok:
                 align = "OPPOSITE"
                 concession = True
                 reason = "pairwise_opposition"
@@ -216,3 +220,7 @@ class ConcessionService:
             return f"{t}."
         else:  # bot is CON
             return f"It is not true that {t}."
+
+    def nli_confident(self, scores: Dict[str,float], *, pmin=0.75, margin=0.15) -> bool:
+        vals = sorted(scores.values(), reverse=True)
+        return vals[0] >= pmin and (vals[0]-vals[1]) >= margin

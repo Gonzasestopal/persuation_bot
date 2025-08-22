@@ -17,3 +17,11 @@ class ConfigError(Exception):
     starting or operating correctly.
     """
     pass
+
+
+class LLMTimeout(DomainError):               # 503
+    code = "llm_timeout"
+
+
+class LLMServiceError(DomainError):          # 502 or 503 (choose)
+    code = "llm_service_error"

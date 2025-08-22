@@ -2,18 +2,18 @@ import datetime as dt
 
 import pytest
 
+from app.adapters.repositories.memory import InMemoryMessageRepo
 from app.domain.models import Conversation, Message
-from tests.fakes import InMemoryRepo
 
 
 @pytest.fixture
 def repo():
-    return InMemoryRepo()
+    return InMemoryMessageRepo()
 
 
 @pytest.mark.asyncio
 async def test_create_and_get_conversation(repo):
-    repo = InMemoryRepo()
+    repo = InMemoryMessageRepo()
     conv = await repo.create_conversation(topic='T', side='pro')
     assert isinstance(conv, Conversation)
 

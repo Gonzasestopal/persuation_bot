@@ -1,4 +1,4 @@
-from functools import partial
+from functools import lru_cache, partial
 from typing import Optional
 
 from fastapi import Depends
@@ -12,6 +12,7 @@ from app.adapters.llm.openai import OpenAIAdapter
 from app.domain.errors import ConfigError
 from app.domain.parser import parse_topic_side
 from app.repositories.base import get_repo
+from app.services.concession_service import ConcessionService
 from app.services.message_service import MessageService
 from app.settings import settings
 
@@ -104,8 +105,21 @@ def make_fallback_llm():
     )
 
 
+@lru_cache(maxsize=1)
+def get_llm_singleton():
+    # Build once per process
+    return make_fallback_llm()
+
+@lru_cache(maxsize=1)
+def get_concession_singleton():
+    # Share the LLM singleton inside the ConcessionService singleton
+    llm = get_llm_singleton()
+    return ConcessionService(llm=llm)
+
+
 def get_service(
     repo=Depends(get_repo),
-    llm=Depends(make_fallback_llm)
+    llm=Depends(get_llm_singleton),
+    concession=Depends(get_concession_singleton),
 ) -> MessageService:
-    return MessageService(parser=parse_topic_side, repo=repo, llm=llm)
+    return MessageService(parser=parse_topic_side, repo=repo, llm=llm, concession_service=concession)

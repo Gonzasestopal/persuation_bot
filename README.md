@@ -14,6 +14,7 @@ An LLM-based chatbot that takes in messages from a user, processes them, and gen
 10. [Production Considerations](#produciton-considerations)
 11. [LLM](#llm)
 12. [Deployment](#deployment)
+13. [Folder Structure](#folder-structure)
 
 ## Overview
 This application challenges you to persuade a chatbot to adopt your point of view while it stands its ground on the initial stance.
@@ -351,4 +352,23 @@ They are configured to run automatically on deployment or using github actions(s
 But you can run manually from your machine using:
 ```
 make migrate
+```
+
+## Folder Structure
+
+```
+persuasion_bot/
+├── app/                # Main application code (API, domain logic, adapters, services)
+├── docs/               # Project documentation (guides, architecture diagrams, notes)
+├── migrations/         # Database migration scripts (likely using Yoyo)
+├── tests/              # Unit and integration tests for the project
+├── .dockerignore       # Files/folders excluded when building Docker images
+├── .env.example        # Example environment variables template
+├── .gitignore          # Specifies files ignored by Git
+├── Dockerfile          # Instructions to build the Docker container
+├── Makefile            # Automation commands (run, test, lint, migrate, etc.)
+├── README.md           # Project overview, installation, usage instructions
+├── docker-compose.yml  # Multi-container setup (API, DB, etc.) for local/dev
+├── requirements.txt    # Python dependencies list
+└── yoyo.ini            # Configuration for Yoyo database migrations
 ```

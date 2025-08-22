@@ -67,6 +67,15 @@ def test_openai_empty_api_key_raises(monkeypatch):
     assert "OPENAI_API_KEY is required" in str(e.value)
 
 
+def test_anthropic_api_key_raises(monkeypatch):
+    stub_settings(monkeypatch, ANTHROPIC_API_KEY="")
+
+    with pytest.raises(ConfigError) as e:
+        fx.get_llm(provider="anthropic")
+
+    assert "ANTHROPIC_API_KEY is required" in str(e.value)
+
+
 def test_set_debate_bot_difficulty_invalid(monkeypatch):
     stub_settings(monkeypatch, DIFFICULTY="hard")
 

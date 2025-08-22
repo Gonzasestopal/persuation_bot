@@ -126,11 +126,38 @@ Copy `.env.example` to `.env`:
 > Update `DATABASE_URL` to `postgresql://app:app@localhost:5432/app` if running locally or `postgresql://app:app@db:5432/app` if running from container
 
 ```
+# --- Required ---
 DATABASE_URL=postgresql://app:app@db:5432/app
-OPENAI_API_KEY=key
+OPENAI_API_KEY=your_openai_key
+ANTHROPIC_API_KEY=your_anthropic_key
+
+# --- LLM Provider Settings ---
 LLM_PROVIDER=openai
 LLM_MODEL=gpt-4o
-DIFFICULTY=easy|medium
+PRIMARY_LLM=openai
+SECONDARY_LLM=anthropic
+
+# --- Difficulty / Conversation Settings ---
+DIFFICULTY=easy   # options: easy | medium
+HISTORY_LIMIT=5
+EXPIRES_MINUTES=60
+
+# --- DB Connection Pool ---
+POOL_MIN=1
+POOL_MAX=10
+USE_INMEMORY_REPO=False
+DISABLE_DB_POOL=False
+
+# --- LLM Behavior ---
+LLM_TEMPERATURE=0.3
+MAX_OUTPUT_TOKENS=120
+REQUEST_TIMEOUT_S=25
+LLM_PER_PROVIDER_TIMEOUT_S=12
+
+# --- Winning Rules ---
+MIN_ASSISTANT_TURNS_BEFORE_VERDICT=5
+REQUIRED_POSITIVE_JUDGEMENTS=2
+
 ```
 
 ### Running the service

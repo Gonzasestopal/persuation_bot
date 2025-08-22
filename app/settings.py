@@ -27,12 +27,12 @@ class Settings(BaseSettings):
 
     # Behavior
     LLM_TEMPERATURE: float = 0.3
-    LLM_MAX_OUTPUT_TOKENS: int = 120
+    MAX_OUTPUT_TOKENS: int = 120
     LLM_PER_PROVIDER_TIMEOUT_S: float = 12.0
 
     MIN_ASSISTANT_TURNS_BEFORE_VERDICT: int = 5
     REQUIRED_POSITIVE_JUDGEMENTS: int = 2
-    MAX_OUTPUT_TOKENS: int = 120
+
 
     class Config:
         env_file = ".env"

@@ -23,7 +23,7 @@ def stub_settings(monkeypatch, **overrides):
         PRIMARY_LLM='openai',
         SECONDARY_LLM='anthropic',
         LLM_MODEL='gpt-4o',
-        LLM_MAX_OUTPUT_TOKENS=120,
+        MAX_OUTPUT_TOKENS=120,
         LLM_PER_PROVIDER_TIMEOUT_S=25,
     )
 

@@ -5,6 +5,7 @@ import pytest
 import app.factories as fx
 from app.adapters.llm.constants import Difficulty, OpenAIModels, Provider
 from app.adapters.llm.dummy import DummyLLMAdapter
+from app.adapters.llm.fallback import FallbackLLM
 from app.adapters.llm.openai import OpenAIAdapter
 from app.domain.exceptions import ConfigError
 
@@ -100,3 +101,18 @@ def test_set_debate_bot_difficulty_easy(monkeypatch):
     a = fx.get_llm(provider="openai")
 
     assert a.difficulty == Difficulty.MEDIUM
+
+
+def test_assert_is_openaiadapter():
+    llm = fx.make_claude()
+    assert isinstance(llm, OpenAIAdapter)
+
+
+def test_assert_is_anthropic(monkeypatch):
+    llm = fx.make_claude()
+    assert isinstance(llm, OpenAIAdapter)
+
+
+def test_assert_is_fallback(monkeypatch):
+    llm = fx.make_fallback_llm()
+    assert isinstance(llm, FallbackLLM)

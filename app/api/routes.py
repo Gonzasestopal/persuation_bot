@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Response, status
 
 from app.api.dto import ConversationOut, MessageOut
 from app.api.requests import MessageIn
-from app.domain.exceptions import LLMTimeout  # domain-level
+from app.domain.errors import LLMTimeout  # domain-level
 from app.factories import get_service
 from app.settings import settings
 

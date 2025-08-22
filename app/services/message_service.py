@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.domain.exceptions import ConversationExpired, ConversationNotFound
+from app.domain.errors import ConversationExpired, ConversationNotFound
 from app.domain.parser import assert_no_topic_or_side_markers
 from app.domain.ports.llm import LLMPort
 from app.domain.ports.message_repo import MessageRepoPort

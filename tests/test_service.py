@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, Mock, call
 
 import pytest
 
-from app.domain.exceptions import (ConversationExpired, ConversationNotFound,
+from app.domain.errors import (ConversationExpired, ConversationNotFound,
                                    InvalidContinuationMessage,
                                    InvalidStartMessage)
 from app.domain.models import Conversation, Message

@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.routes import get_service
-from app.domain.exceptions import ConversationNotFound, InvalidStartMessage
+from app.domain.errors import ConversationNotFound, InvalidStartMessage
 from app.main import app
 from app.settings import settings
 

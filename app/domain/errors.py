@@ -14,7 +14,7 @@ class DomainError(Exception):
     code: str = "domain_error"
 
 
-class ConfigError(Exception):
+class ConfigError(DomainError):
     """Raised when the system is misconfigured.
 
     Use this for missing or invalid environment variables, API keys,
@@ -46,5 +46,4 @@ class LLMTimeout(DomainError):               # 503
 
 
 class LLMServiceError(DomainError):          # 502 or 503 (choose)
-    code = "llm_service_error"
     code = "llm_service_error"

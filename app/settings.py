@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: Optional[str] = None
 
     # Fallback selection
-    PRIMARY_LLM: str = "claude"     # "openai" | "claude"
-    SECONDARY_LLM: str = "openai"
+    PRIMARY_LLM: str = "openai"     # "openai" | "claude"
+    SECONDARY_LLM: str = "anthropic"
 
     # Behavior
     LLM_TEMPERATURE: float = 0.3

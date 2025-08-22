@@ -5,7 +5,7 @@ from datetime import datetime
 import pytest
 
 from app.adapters.llm.fallback import FallbackLLM
-from app.domain import exceptions as de
+from app.domain import errors as de
 from app.domain.models import Conversation, Message
 
 

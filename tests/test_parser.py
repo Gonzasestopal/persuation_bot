@@ -1,6 +1,6 @@
 import pytest
 
-from app.domain.exceptions import (InvalidContinuationMessage,
+from app.domain.errors import (InvalidContinuationMessage,
                                    InvalidStartMessage)
 from app.domain.parser import parse_topic_side
 

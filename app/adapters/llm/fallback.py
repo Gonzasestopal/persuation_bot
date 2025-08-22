@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 from typing import Awaitable, Callable, List, Optional, Tuple
 
-from app.domain import exceptions as de
+from app.domain import errors as de
 from app.domain.models import Conversation, Message
 from app.domain.ports.llm import LLMPort
 

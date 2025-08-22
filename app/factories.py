@@ -9,7 +9,7 @@ from app.adapters.llm.constants import (AnthropicModels, Difficulty,
 from app.adapters.llm.dummy import DummyLLMAdapter
 from app.adapters.llm.fallback import FallbackLLM
 from app.adapters.llm.openai import OpenAIAdapter
-from app.domain.exceptions import ConfigError
+from app.domain.errors import ConfigError
 from app.domain.parser import parse_topic_side
 from app.repositories.base import get_repo
 from app.services.message_service import MessageService
@@ -76,7 +76,6 @@ def make_claude():
     return AnthropicAdapter(
         api_key=settings.ANTHROPIC_API_KEY,
         model=AnthropicModels.CLAUDE_35,
-
         max_output_tokens=settings.LLM_MAX_OUTPUT_TOKENS,  # your existing budget
         difficulty=settings.DIFFICULTY,
     )

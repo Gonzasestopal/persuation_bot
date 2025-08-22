@@ -8,7 +8,7 @@ from app.adapters.llm.constants import Difficulty, OpenAIModels, Provider
 from app.adapters.llm.dummy import DummyLLMAdapter
 from app.adapters.llm.fallback import FallbackLLM
 from app.adapters.llm.openai import OpenAIAdapter
-from app.domain.exceptions import ConfigError
+from app.domain.errors import ConfigError
 
 
 def stub_settings(monkeypatch, **overrides):

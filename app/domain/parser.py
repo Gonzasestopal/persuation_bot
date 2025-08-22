@@ -3,7 +3,7 @@ from typing import Tuple
 
 _ALLOWED = {"pro", "con"}
 
-from app.domain.exceptions import (InvalidContinuationMessage,
+from app.domain.errors import (InvalidContinuationMessage,
                                    InvalidStartMessage)
 
 _TOPIC_RE = re.compile(r"(?i)\btopic\s*:\s*(?P<topic>.+?)(?=,?\s*\bside\b|$)")

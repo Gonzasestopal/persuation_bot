@@ -3,7 +3,9 @@ from typing import Optional
 
 from fastapi import Depends
 
-from app.adapters.llm.constants import Difficulty, OpenAIModels, Provider
+from app.adapters.llm.anthropic import AnthropicAdapter
+from app.adapters.llm.constants import (AnthropicModels, Difficulty,
+                                        OpenAIModels, Provider)
 from app.adapters.llm.dummy import DummyLLMAdapter
 from app.adapters.llm.openai import OpenAIAdapter
 from app.domain.exceptions import ConfigError
@@ -17,10 +19,11 @@ def get_llm(
     provider: Optional[str] = None,
     model: Optional[str] = None,
 ):
-    if provider != Provider.OPENAI.value:
-        return DummyLLMAdapter()
 
-    if not settings.OPENAI_API_KEY:
+    if provider == Provider.ANTHROPIC.value and not settings.ANTHROPIC_API_KEY:
+        raise ConfigError("ANTHROPIC_API_KEY is required for provider=anthropic")
+
+    if provider == Provider.OPENAI.value and not settings.OPENAI_API_KEY:
         raise ConfigError("OPENAI_API_KEY is required for provider=openai")
 
     if not settings.DIFFICULTY:
@@ -31,17 +34,27 @@ def get_llm(
     except ValueError:
         raise ConfigError("ONLY EASY AND MEDIUM DIFFICULTY ARE SUPPORTED")
 
-    wanted_model = (model or OpenAIModels.GPT_4O.value).strip().lower()
-    try:
-        model_enum = OpenAIModels(wanted_model)
-    except ValueError:
-        raise ConfigError(f"{wanted_model} is not a valid OpenAI model")
+    if provider == Provider.OPENAI.value:
+        wanted_model = (model or OpenAIModels.GPT_4O.value).strip().lower()
+        try:
+            model_enum = OpenAIModels(wanted_model)
+        except ValueError:
+            raise ConfigError(f"{wanted_model} is not a valid OpenAI model")
+        return OpenAIAdapter(
+            api_key=settings.OPENAI_API_KEY,
+            model=model_enum,
+            difficulty=difficulty,
+        )
 
-    return OpenAIAdapter(
-        api_key=settings.OPENAI_API_KEY,
-        model=model_enum,
-        difficulty=difficulty,
-    )
+    elif provider == Provider.ANTHROPIC.value:
+        return AnthropicAdapter(
+            api_key=settings.OPENAI_API_KEY,
+            model=AnthropicModels.CLAUDE_35,
+            difficulty=difficulty,
+        )
+
+    return DummyLLMAdapter()
+
 
 def get_service(
     repo=Depends(get_repo),
@@ -51,4 +64,5 @@ def get_service(
         model=settings.LLM_MODEL,
     ))
 ) -> MessageService:
+    return MessageService(parser=parse_topic_side, repo=repo, llm=llm)
     return MessageService(parser=parse_topic_side, repo=repo, llm=llm)

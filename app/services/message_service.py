@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.domain.concession_policy import DebateState
 from app.domain.errors import ConversationExpired, ConversationNotFound
 from app.domain.parser import assert_no_topic_or_side_markers
 from app.domain.ports.llm import LLMPort

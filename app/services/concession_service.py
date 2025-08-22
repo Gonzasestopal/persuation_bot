@@ -64,24 +64,20 @@ class ConcessionService:
         mapped = self._map_history(messages)
         last_two_eval = self.judge_last_two_messages(conversation=mapped, stance=stance, topic=topic)
 
-        print(last_two_eval)
-
         if self._is_positive_judgment(last_two_eval):
             state.positive_judgements += 1
 
         if state.maybe_conclude():
             state.match_concluded = True
-            return "Match concluded."
+            return self._build_verdict()
 
         reply = await self.llm.debate(messages=messages)
 
         state.assistant_turns += 1
 
-        print(state.assistant_turns, state.positive_judgements)
-
         if state.maybe_conclude():
             state.match_concluded = True
-            return reply.strip() + "\n\nMatch concluded."
+            return self._build_verdict()
 
         return reply.strip()
 
@@ -224,3 +220,6 @@ class ConcessionService:
     def nli_confident(self, scores: Dict[str,float], *, pmin=0.75, margin=0.15) -> bool:
         vals = sorted(scores.values(), reverse=True)
         return vals[0] >= pmin and (vals[0]-vals[1]) >= margin
+
+    def _build_verdict(self) -> str:
+        return "On balance, the opposing argument addressed key counters with evidence and causality. I concede the point. Match concluded."

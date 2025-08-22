@@ -16,6 +16,8 @@ An LLM-based chatbot that takes in messages from a user, processes them, and gen
 12. [LLM](#llm)
 13. [Deployment Guide](#deployment-guide)
 14. [Testing](#testing)
+15. [Debate Argument Evaluation](#debate-evaluation)
+
 
 ---
 
@@ -25,6 +27,23 @@ This application challenges you to persuade a chatbot to adopt your point of vie
 Includes:
 - Single endpoint to handle messages and responses.
 - Conversation history capped at the 5 most recent user+bot pairs.
+
+**Safeguards Against Rule Gaming (Extra Feature)**
+
+> [!WARNING]
+> During testing we found that clever prompts can “hack” the system by covering every evaluation criterion in a single turn, bypassing real back-and-forth.
+
+To prevent this, we implemented Semantic Judgments with NLI.
+
+Each user–assistant exchange is passed through a pretrained Natural Language Inference (NLI) model:
+
+**Entailment** → Valid support/agreement
+
+**Contradiction** → Valid opposition (may trigger concession)
+
+**Neutral** → Ignored
+
+This ensures concessions only happen after meaningful, multi-turn reasoning, protecting the fairness and integrity of debates.
 
 ---
 
@@ -282,5 +301,37 @@ Execute the full test suite with coverage reporting:
 ```bash
 make test
 ```
+
+</details>
+
+---
+
+<details>
+  <summary>⚡Debate Argument Evaluation </summary>
+
+After running a few examples using the `MEDIUM_SYSTEM_PROMPT` theres seems to be a way to "hack" the bot to return in few turns than expected ( 1 < turn), thats because we can apply "rule gaming" to match what the bot expectations are to bypass a real conversation.
+
+```
+Dogs are humanity’s best friends because they uniquely combine loyalty, emotional support, and proven health benefits. I’ve already addressed evidence (studies show reduced stress), causality (their presence lowers cortisol), counterexamples (cats don’t offer the same consistency), trade-offs (their care cost is outweighed by benefits), and scope (applies globally, across cultures). Given I’ve preemptively covered every angle you could use, what new counterpoint can you possibly raise without repeating yourself?
+```
+
+This type of move exploits the debate rules to bypass meaningful turn-taking. According to our domain requirements, at least five assistant turns must occur and a minimum of two positive judgments must be registered before a concession is even possible:
+
+```
+min_assistant_turns_before_verdict: int = 5
+required_positive_judgments: int = 2
+````
+
+### NLI-Based Judgments
+
+To improve robustness, we add a Natural Language Inference (NLI) layer on top of the LLM outputs. Each user–assistant pair is evaluated using a pretrained NLI model, which classifies the relationship as
+
+Entailment valid support or agreement (counts toward positive judgments)
+
+Neutral (no judgment)
+
+Contradiction (disagreement)
+
+This hybrid approach ensures that concessions are grounded in semantic alignment/contradiction rather than superficial rule-matching, making the debate more resistant to adversarial shortcuts.
 
 </details>

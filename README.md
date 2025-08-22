@@ -121,6 +121,10 @@ cd persuasion_bot
 
 ### Environment
 Copy `.env.example` to `.env`:
+
+> [!IMPORTANT]
+> Update `DATABASE_URL` to `postgresql://app:app@localhost:5432/app` if running locally or `postgresql://app:app@db:5432/app` if running from container
+
 ```
 DATABASE_URL=postgresql://app:app@db:5432/app
 OPENAI_API_KEY=key
@@ -197,12 +201,16 @@ POST /messages
 
 ---
 
-## Non Functional Requirements
+<details>
+  <summary> 🦉 Non Functional Requirements </summary>
+
 - **Latency**: < 30s response, 25s internal timeout.
 - **Scalability**: Redis caching for LLM + history.
 - **History Window**: last 5 user+bot pairs only.
 - **Fault Tolerance**: fallback short replies on timeout.
 - **Storage**: conversations expire after 60m inactivity.
+
+</details>
 
 ---
 

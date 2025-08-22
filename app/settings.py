@@ -32,7 +32,7 @@ class Settings(BaseSettings):
 
     MIN_ASSISTANT_TURNS_BEFORE_VERDICT: int = 5
     REQUIRED_POSITIVE_JUDGEMENTS: int = 2
-    MAX_OUTPUT_TOKENS: int
+    MAX_OUTPUT_TOKENS: int = 120
 
     class Config:
         env_file = ".env"

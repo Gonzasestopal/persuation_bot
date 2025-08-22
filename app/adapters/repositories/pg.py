@@ -59,6 +59,7 @@ class PgMessageRepo(MessageRepoPort):
         SELECT role, message, created_at
         FROM messages
         WHERE conversation_id = %s
+        ORDER BY created_at ASC, message_id ASC
         """
         async with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(q, (conversation_id,))

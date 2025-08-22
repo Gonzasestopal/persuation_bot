@@ -1,5 +1,4 @@
 import os
-import re
 import time
 
 import pytest
@@ -29,7 +28,7 @@ def test_real_llm_never_changes_stance(
 ):
     # ---- Turn 1: start conversation ----
     r1 = client.post("/messages", json={"conversation_id": None, "message": start_message})
-    assert r1.status_code in (200, 201), r1.text
+    assert r1.status_code == 201, r1.text
     data1 = r1.json()
 
     # Keep the returned conversation_id to continue the same debate thread
@@ -44,7 +43,7 @@ def test_real_llm_never_changes_stance(
 
     # ---- Turn 2: continue same conversation ----
     r2 = client.post("/messages", json={"conversation_id": conv_id, "message": second_msg})
-    assert r2.status_code in (200, 201), r2.text
+    assert r2.status_code == 200, r2.text
     data2 = r2.json()
 
     second_bot_msg = data2["message"][-1]["message"]

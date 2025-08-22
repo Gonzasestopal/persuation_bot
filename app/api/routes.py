@@ -1,7 +1,7 @@
 
 import asyncio
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response, status
 from starlette.responses import JSONResponse
 
 from app.api.dto import ConversationOut, MessageOut
@@ -13,7 +13,8 @@ router = APIRouter()
 
 
 @router.post("/messages", status_code=201, response_model=ConversationOut)
-async def start_conversation(message: MessageIn, service=Depends(get_service)):
+async def start_conversation(message: MessageIn, response: Response, service=Depends(get_service)):
+    is_new = message.conversation_id is None
     try:
         result = await asyncio.wait_for(
             service.handle(
@@ -21,6 +22,9 @@ async def start_conversation(message: MessageIn, service=Depends(get_service)):
                 message=message.message,
             ),
             timeout=settings.REQUEST_TIMEOUT_S,
+        )
+        response.status_code = (
+            status.HTTP_201_CREATED if is_new else status.HTTP_200_OK
         )
         return ConversationOut(
             conversation_id=result["conversation_id"],

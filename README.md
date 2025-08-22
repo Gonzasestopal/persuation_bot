@@ -147,7 +147,7 @@ No authentication required.
 > [!IMPORTANT]
 > First message must include `topic` and `side` (PRO, CON).
 
-**Start a new conversation**
+**Start a new conversation** 201
 ```http
 POST /messages
 ```
@@ -158,7 +158,7 @@ POST /messages
 }
 ```
 
-**Continue a conversation**
+**Continue a conversation** 200
 ```json
 {
   "conversation_id": 1,

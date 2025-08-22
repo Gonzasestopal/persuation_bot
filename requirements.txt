@@ -13,5 +13,6 @@ python-dotenv
 pytest-cov
 anthropic
 huggingface_hub
-torch==2.4.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+torch
 transformers
+protobuf

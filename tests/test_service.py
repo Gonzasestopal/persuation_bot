@@ -176,7 +176,9 @@ async def test_continue_conversation_writes_and_returns_window(repo, llm):
     user_message = Message(role="user", message="I firmly believe...")
     bot_message = Message(role="bot", message="OK")
     parser = Mock(side_effect=AssertionError("parser must not be called on continue"))
-    svc = MessageService(parser=parser, repo=repo, llm=llm, history_limit=5)
+    concession_service = Mock()
+    concession_service.analyze_conversation = AsyncMock(return_value='bot msg processing reply')
+    svc = MessageService(parser=parser, repo=repo, llm=llm, history_limit=5, concession_service=concession_service)
 
     out = await svc.continue_conversation(message="I firmly believe...", conversation_id=123)
 
@@ -247,7 +249,9 @@ async def test_continue_conversation_respects_history_limit(llm):
     )
 
     parser = Mock(side_effect=AssertionError("parser must not be called"))
-    svc = MessageService(parser=parser, repo=repo, llm=llm, history_limit=2)
+    concession_service = Mock()
+    concession_service.analyze_conversation = AsyncMock(return_value='bot msg processing reply')
+    svc = MessageService(parser=parser, repo=repo, llm=llm, history_limit=2, concession_service=concession_service)
 
     out = await svc.continue_conversation(message="hi", conversation_id=123)
 
@@ -352,7 +356,9 @@ async def test_continue_conversation_retrieves_all_messages(llm):
     )
 
     parser = Mock(side_effect=AssertionError("parser must not be called on continue"))
-    svc = MessageService(parser=parser, repo=repo, llm=llm, history_limit=1)
+    concession_service = Mock()
+    concession_service.analyze_conversation = AsyncMock(return_value='bot msg processing reply')
+    svc = MessageService(parser=parser, repo=repo, llm=llm, history_limit=1, concession_service=concession_service)
 
     out = await svc.continue_conversation(message="I firmly believe...", conversation_id=123)
 

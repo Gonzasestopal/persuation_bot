@@ -3,6 +3,8 @@ import time
 
 import pytest
 
+from app.settings import settings
+
 
 @pytest.mark.skipif(
     not os.environ.get("OPENAI_API_KEY"),
@@ -48,3 +50,42 @@ def test_real_llm_never_changes_stance(
 
     second_bot_msg = data2["message"][-1]["message"]
     assert second_expected_stance in second_bot_msg
+
+
+def test_returns_422_on_invalid_start(client):
+    """
+    Starting a conversation without 'Topic: ...' and 'Side: PRO|CON' should
+    trigger your parser to raise ValueError -> route returns 422.
+    """
+    r = client.post("/messages", json={"conversation_id": None, "message": "hello there"})
+    assert r.status_code == 422, r.text
+
+    # Optional: detail text check (keep loose to avoid brittle tests)
+    detail = r.json().get("detail", "")
+    assert "topic" in detail.lower() or "side" in detail.lower()
+
+def test_returns_404_on_unknown_conversation_id(client):
+    """
+    Continuing a conversation with a non-existent conversation_id should raise
+    KeyError -> route returns 404.
+    """
+    r = client.post("/messages", json={"conversation_id": 999_999_999, "message": "continue please"})
+    assert r.status_code == 404, r.text
+
+    # Optional: exact message match based on your route
+    assert r.json().get("detail") == "conversation_id not found or expired"
+
+def test_returns_503_on_timeout(client, monkeypatch):
+    """
+    Force an asyncio.wait_for timeout by setting the request timeout to 0 seconds.
+    This guarantees a TimeoutError -> route returns 503, regardless of LLM speed.
+    """
+    # Set timeout to zero only for this test
+    monkeypatch.setattr(settings, "REQUEST_TIMEOUT_S", 0)
+
+    # Start conversation (this will hit the timeout in wait_for)
+    r = client.post("/messages", json={"conversation_id": None, "message": "Topic: X. Side: PRO."})
+    assert r.status_code == 503, r.text
+    assert r.json().get("detail") == "response generation timed out"
+
+    # (Restore is automatic after test because monkeypatch patched the object attribute for test scope)

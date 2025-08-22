@@ -13,12 +13,13 @@ class Settings(BaseSettings):
     REQUEST_TIMEOUT_S: int = 25
     POOL_MIN: int = 1
     POOL_MAX: int = 10
-    OPENAI_API_KEY: str
+    OPENAI_API_KEY: Optional[str] = None
     LLM_PROVIDER: Optional[Provider] = Provider.OPENAI
     LLM_MODEL: str = OpenAIModels.GPT_4O
     DIFFICULTY: Optional[Difficulty]
     USE_INMEMORY_REPO: bool = Field(default=False, env="USE_INMEMORY_REPO")
     DISABLE_DB_POOL: bool = Field(default=False, env="DISABLE_DB_POOL")
+    ANTHROPIC_API_KEY: Optional[str] = None
 
     class Config:
         env_file = ".env"
@@ -31,6 +32,18 @@ class Settings(BaseSettings):
 
     @field_validator("DIFFICULTY", mode="before")
     def allow_blank_difficulty(cls, v):
+        if v == "" or v is None:
+            return None
+        return v
+
+    @field_validator("OPENAI_API_KEY", mode="before")
+    def allow_blank_openai(cls, v):
+        if v == "" or v is None:
+            return None
+        return v
+
+    @field_validator("ANTHROPIC_API_KEY", mode="before")
+    def allow_blank_anthropic(cls, v):
         if v == "" or v is None:
             return None
         return v

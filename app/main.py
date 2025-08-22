@@ -11,17 +11,27 @@ from app.settings import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.dbpool = AsyncConnectionPool(
-        conninfo=settings.DATABASE_URL.encoded_string(),
-        min_size=settings.POOL_MIN,
-        max_size=settings.POOL_MAX,
-        open=True,
-    )
+    app.state.dbpool = None
+    app.state.inmem_repo = None
+
+    if settings.USE_INMEMORY_REPO:
+        from app.adapters.repositories.memory import InMemoryMessageRepo
+        app.state.inmem_repo = InMemoryMessageRepo()
+
+    if not settings.DISABLE_DB_POOL:
+        app.state.dbpool = AsyncConnectionPool(
+            conninfo=settings.DATABASE_URL.encoded_string(),
+            min_size=settings.POOL_MIN,
+            max_size=settings.POOL_MAX,
+            open=True,
+        )
     try:
         yield
     finally:
-        await app.state.dbpool.close()
-        await app.state.dbpool.wait_closed()
+        pool = getattr(app.state, "dbpool", None)
+        if pool is not None:
+            await pool.close()
+            await pool.wait_closed()
 
 app = FastAPI(lifespan=lifespan)
 

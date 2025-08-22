@@ -1,6 +1,6 @@
 from typing import AnyStr, Optional
 
-from pydantic import AnyUrl, field_validator
+from pydantic import AnyUrl, Field, field_validator
 from pydantic_settings import BaseSettings
 
 from app.adapters.llm.constants import Difficulty, OpenAIModels, Provider
@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     LLM_PROVIDER: Optional[Provider] = Provider.OPENAI
     LLM_MODEL: str = OpenAIModels.GPT_4O
     DIFFICULTY: Optional[Difficulty]
+    USE_INMEMORY_REPO: bool = Field(default=False, env="USE_INMEMORY_REPO")
+    DISABLE_DB_POOL: bool = Field(default=False, env="DISABLE_DB_POOL")
 
     class Config:
         env_file = ".env"

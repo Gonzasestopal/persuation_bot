@@ -78,23 +78,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .venv
-          key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+          key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}-2
 
       - name: Install dependencies
         if: steps.venv-cache.outputs.cache-hit != 'true'
         run: poetry install --no-root --all-extras
 
       - name: Run tests
-        run: poetry run pytest --cov=app --cov-report=term-missing --cov-report=xml
-
-      - name: Publish code coverage to Code Climate
-        if: env.CC_TEST_REPORTER_ID != ''
-        uses: paambaati/codeclimate-action@v5.0.0
-        env:
-          CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
-        with:
-          coverageLocations: |
-            ./coverage.xml:coverage.py
+        run: PYTHONPATH=. poetry run pytest --cov=app --cov-report=term-missing --cov-report=xml
 
   commit_lint:
     runs-on: ubuntu-latest

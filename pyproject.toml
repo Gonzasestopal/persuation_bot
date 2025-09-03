@@ -38,9 +38,9 @@ addopts = "-ra -q --cov=app --cov-report=term-missing"
 asyncio_mode = "auto"
 
 [tool.ruff]
-line-length = 88
+target-version = "py39"
 indent-width = 4
-target-version = "py311"
+line-length = 88   # o 100/120/140 según prefieras
 
 [tool.ruff.format]
 quote-style = "single"

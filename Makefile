@@ -72,7 +72,8 @@ lint:
 	ruff check app tests
 
 fmt:
-	ruff format app tests && ruff check --fix app tests
+	ruff format app tests
+	ruff check --fix app tests
 
 commit_check:
 	cz check --rev-range origin/master..HEAD

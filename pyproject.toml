@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "A debate-oriented chatbot backend."
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
-package-mode = false
+packages = [{ include = "app" }]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.10"
@@ -38,9 +38,9 @@ addopts = "-ra -q --cov=app --cov-report=term-missing"
 asyncio_mode = "auto"
 
 [tool.ruff]
-line-length = 88
+target-version = "py39"
 indent-width = 4
-target-version = "py311"
+line-length = 88   # o 100/120/140 según prefieras
 
 [tool.ruff.format]
 quote-style = "single"
@@ -55,3 +55,9 @@ combine-as-imports = true
 [build-system]
 requires = ["poetry-core>=1.9.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "1.0.0"
+tag_format = "v$version"
+update_changelog_on_bump = true

@@ -146,8 +146,7 @@ def test_returns_500_on_missing_api_key(client, monkeypatch):
 
         # Be flexible on the message, but it should mention config / api key.
         detail = r.json().get('detail', '').lower()
-        assert (
-            'config' in detail or 'api_key' in detail or 'misconfigured' in detail
-        ), detail
+        allowed = ('config' in detail, 'api_key' in detail, 'misconfigured' in detail)
+        assert any(allowed), detail
     finally:
         _restore_di_override(had_override, saved)

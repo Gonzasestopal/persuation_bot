@@ -16,7 +16,7 @@ class FallbackLLM(LLMPort):
         secondary: LLMPort,
         *,
         per_provider_timeout_s: float = 15.0,
-        mode: str = "sequential",   # "sequential" | "hedged"
+        mode: str = 'sequential',  # "sequential" | "hedged"
         logger: Optional[Callable[[str], None]] = None,
     ) -> None:
         self.primary = primary
@@ -34,7 +34,7 @@ class FallbackLLM(LLMPort):
 
     # ---- Internals ----
     async def _invoke(self, fn_builder: Callable[[LLMPort], Awaitable[str]]) -> str:
-        if self.mode == "hedged":
+        if self.mode == 'hedged':
             return await self._hedged_call(fn_builder)
         return await self._sequential_call(fn_builder)
 
@@ -49,41 +49,47 @@ class FallbackLLM(LLMPort):
         Maps low-level timeouts/errors into domain errors.
         """
         try:
-            self.log(f"LLM {label}: start")
+            self.log(f'LLM {label}: start')
             result = await asyncio.wait_for(fn_builder(provider), timeout=self.timeout)
             return True, result
         except asyncio.TimeoutError:
-            err = de.LLMTimeout(f"{label} provider timed out after {self.timeout:.2f}s")
-            self.log(f"LLM {label}: timeout -> {err}")
+            err = de.LLMTimeout(f'{label} provider timed out after {self.timeout:.2f}s')
+            self.log(f'LLM {label}: timeout -> {err}')
             return False, err
         except Exception as e:
-            err = de.LLMServiceError(f"{label} provider failed: {type(e).__name__}: {e}")
-            self.log(f"LLM {label}: failure -> {err}")
+            err = de.LLMServiceError(
+                f'{label} provider failed: {type(e).__name__}: {e}'
+            )
+            self.log(f'LLM {label}: failure -> {err}')
             return False, err
 
     def _raise_combined(self, errs: List[Exception]) -> None:
         # Prefer service errors if any; otherwise surface timeout
         non_timeouts = [e for e in errs if not isinstance(e, de.LLMTimeout)]
         if non_timeouts:
-            detail = "; ".join(str(e) for e in non_timeouts)
-            raise de.LLMServiceError(f"Both LLM providers failed. Details: {detail}")
-        detail = "; ".join(str(e) for e in errs)
-        raise de.LLMTimeout(f"Both LLM providers timed out. Details: {detail}")
+            detail = '; '.join(str(e) for e in non_timeouts)
+            raise de.LLMServiceError(f'Both LLM providers failed. Details: {detail}')
+        detail = '; '.join(str(e) for e in errs)
+        raise de.LLMTimeout(f'Both LLM providers timed out. Details: {detail}')
 
-    async def _sequential_call(self, fn_builder: Callable[[LLMPort], Awaitable[str]]) -> str:
-        ok1, r1 = await self._try_provider("primary", self.primary, fn_builder)
+    async def _sequential_call(
+        self, fn_builder: Callable[[LLMPort], Awaitable[str]]
+    ) -> str:
+        ok1, r1 = await self._try_provider('primary', self.primary, fn_builder)
         if ok1:
             return r1  # type: ignore[return-value]
 
-        ok2, r2 = await self._try_provider("secondary", self.secondary, fn_builder)
+        ok2, r2 = await self._try_provider('secondary', self.secondary, fn_builder)
         if ok2:
             return r2  # type: ignore[return-value]
 
         # Both failed
         self._raise_combined([r1, r2])  # type: ignore[arg-type]
-        raise AssertionError("unreachable")  # for type checkers
+        raise AssertionError('unreachable')  # for type checkers
 
-    async def _hedged_call(self, fn_builder: Callable[[LLMPort], Awaitable[str]]) -> str:
+    async def _hedged_call(
+        self, fn_builder: Callable[[LLMPort], Awaitable[str]]
+    ) -> str:
         """
         Start primary immediately and secondary after a small delay.
         Return the first success; if both fail, raise a domain error.
@@ -91,17 +97,19 @@ class FallbackLLM(LLMPort):
         loop = asyncio.get_event_loop()
 
         async def primary_coro():
-            return await self._try_provider("primary", self.primary, fn_builder)
+            return await self._try_provider('primary', self.primary, fn_builder)
 
         async def secondary_coro():
             await asyncio.sleep(self.hedge_delay_s)
-            return await self._try_provider("secondary", self.secondary, fn_builder)
+            return await self._try_provider('secondary', self.secondary, fn_builder)
 
         tasks = {loop.create_task(primary_coro()), loop.create_task(secondary_coro())}
         errors: List[Exception] = []
 
         while tasks:
-            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            done, pending = await asyncio.wait(
+                tasks, return_when=asyncio.FIRST_COMPLETED
+            )
             for t in done:
                 ok, res = await t  # res: str | Exception
                 if ok:
@@ -115,4 +123,4 @@ class FallbackLLM(LLMPort):
 
         # If we exit the loop, both failed
         self._raise_combined(errors)
-        raise AssertionError("unreachable")
+        raise AssertionError('unreachable')

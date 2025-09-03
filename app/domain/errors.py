@@ -10,8 +10,9 @@ class DomainError(Exception):
     Raise subclasses of this in services, repositories, or adapters
     when the problem is related to business rules or domain state.
     """
+
     message: str
-    code: str = "domain_error"
+    code: str = 'domain_error'
 
 
 class ConfigError(DomainError):
@@ -21,29 +22,30 @@ class ConfigError(DomainError):
     or other critical configuration values that prevent the app from
     starting or operating correctly.
     """
-    code = "missing or misconfigured setting"
+
+    code = 'missing or misconfigured setting'
 
 
 # 4xx
-class InvalidStartMessage(DomainError):      # 422
-    code = "invalid_start_message"
+class InvalidStartMessage(DomainError):  # 422
+    code = 'invalid_start_message'
 
 
 class InvalidContinuationMessage(DomainError):  # 422
-    code = "invalid_continuation_message"
+    code = 'invalid_continuation_message'
 
 
-class ConversationNotFound(DomainError):     # 404
-    code = "conversation_not_found"
+class ConversationNotFound(DomainError):  # 404
+    code = 'conversation_not_found'
 
 
-class ConversationExpired(DomainError):      # 404
-    code = "conversation_expired"
+class ConversationExpired(DomainError):  # 404
+    code = 'conversation_expired'
 
 
-class LLMTimeout(DomainError):               # 503
-    code = "llm_timeout"
+class LLMTimeout(DomainError):  # 503
+    code = 'llm_timeout'
 
 
-class LLMServiceError(DomainError):          # 502 or 503 (choose)
-    code = "llm_service_error"
+class LLMServiceError(DomainError):  # 502 or 503 (choose)
+    code = 'llm_service_error'

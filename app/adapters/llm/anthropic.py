@@ -2,8 +2,12 @@ from typing import Iterable, List, Optional
 
 from anthropic import AsyncAnthropic
 
-from app.adapters.llm.constants import (MEDIUM_SYSTEM_PROMPT, SYSTEM_PROMPT,
-                                        AnthropicModels, Difficulty)
+from app.adapters.llm.constants import (
+    MEDIUM_SYSTEM_PROMPT,
+    SYSTEM_PROMPT,
+    AnthropicModels,
+    Difficulty,
+)
 from app.domain.models import Conversation, Message
 from app.domain.ports.llm import LLMPort
 
@@ -26,7 +30,11 @@ class AnthropicAdapter(LLMPort):
 
     @property
     def system_prompt(self) -> str:
-        return MEDIUM_SYSTEM_PROMPT if self.difficulty == Difficulty.MEDIUM else SYSTEM_PROMPT
+        return (
+            MEDIUM_SYSTEM_PROMPT
+            if self.difficulty == Difficulty.MEDIUM
+            else SYSTEM_PROMPT
+        )
 
     def _build_user_msg(self, topic: str, side: str) -> str:
         return f"You are debating the topic '{topic}'. Take the {side} side."
@@ -35,8 +43,10 @@ class AnthropicAdapter(LLMPort):
     def _map_history(messages: List[Message]) -> List[dict]:
         # Domain -> Anthropic roles
         return [
-            {"role": ("assistant" if m.role == "bot" else "user"),
-             "content": [{"type": "text", "text": m.message}]}
+            {
+                'role': ('assistant' if m.role == 'bot' else 'user'),
+                'content': [{'type': 'text', 'text': m.message}],
+            }
             for m in messages
         ]
 
@@ -49,14 +59,15 @@ class AnthropicAdapter(LLMPort):
             max_tokens=self.max_output_tokens,
         )
         # Join text blocks from the response
-        return "".join(
-            block.text for block in resp.content
-            if getattr(block, "type", None) == "text"
+        return ''.join(
+            block.text
+            for block in resp.content
+            if getattr(block, 'type', None) == 'text'
         )
 
     async def generate(self, conversation: Conversation) -> str:
         user = self._build_user_msg(conversation.topic, conversation.side)
-        msgs = [{"role": "user", "content": [{"type": "text", "text": user}]}]
+        msgs = [{'role': 'user', 'content': [{'type': 'text', 'text': user}]}]
         return await self._request(messages=msgs, system=self.system_prompt)
 
     async def debate(self, messages: List[Message]) -> str:

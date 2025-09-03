@@ -12,15 +12,18 @@ class PgMessageRepo(MessageRepoPort):
         self.pool = pool
 
     async def create_conversation(self, *, topic: str, side: str) -> Conversation:
-        q = "INSERT INTO conversations (topic, side) VALUES (%s, %s) RETURNING conversation_id, expires_at"
+        q = 'INSERT INTO conversations (topic, side) VALUES (%s, %s) RETURNING conversation_id, expires_at'
         async with self.pool.connection() as conn, conn.cursor() as cur:
             await cur.execute(q, (topic, side))
             (cid, expires_at) = await cur.fetchone()
             return Conversation(id=cid, topic=topic, side=side, expires_at=expires_at)
 
     async def get_conversation(self, conversation_id: int) -> Optional[Conversation]:
-        q = "SELECT conversation_id AS id, topic, side, expires_at FROM conversations WHERE conversation_id = %s"
-        async with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        q = 'SELECT conversation_id AS id, topic, side, expires_at FROM conversations WHERE conversation_id = %s'
+        async with (
+            self.pool.connection() as conn,
+            conn.cursor(row_factory=dict_row) as cur,
+        ):
             await cur.execute(q, (conversation_id,))
             row = await cur.fetchone()
             return Conversation(**row) if row else None
@@ -33,7 +36,7 @@ class PgMessageRepo(MessageRepoPort):
             await cur.execute(q, (conversation_id,))
 
     async def add_message(self, conversation_id: int, *, role: str, text: str) -> None:
-        q = "INSERT INTO messages (conversation_id, role, message) VALUES (%s, %s, %s) RETURNING message_id"
+        q = 'INSERT INTO messages (conversation_id, role, message) VALUES (%s, %s, %s) RETURNING message_id'
         async with self.pool.connection() as conn, conn.cursor() as cur:
             await cur.execute(q, (conversation_id, role, text))
 
@@ -49,7 +52,10 @@ class PgMessageRepo(MessageRepoPort):
         ) sub
         ORDER BY created_at ASC, message_id ASC
         """
-        async with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        async with (
+            self.pool.connection() as conn,
+            conn.cursor(row_factory=dict_row) as cur,
+        ):
             await cur.execute(q, (conversation_id, limit))
             rows = await cur.fetchall()
             return [Message(**dict(r)) for r in rows]
@@ -61,7 +67,10 @@ class PgMessageRepo(MessageRepoPort):
         WHERE conversation_id = %s
         ORDER BY created_at ASC, message_id ASC
         """
-        async with self.pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        async with (
+            self.pool.connection() as conn,
+            conn.cursor(row_factory=dict_row) as cur,
+        ):
             await cur.execute(q, (conversation_id,))
             rows = await cur.fetchall()
             return [Message(**dict(r)) for r in rows]

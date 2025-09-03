@@ -2,6 +2,8 @@
 
 DOCKER_COMPOSE ?= docker compose
 
+files = `find ./service ./tests -name "*.py"`
+
 ifeq ($(OS),Windows_NT)
 	VENV_PYTHON=.venv\Scripts\python.exe
 	UVICORN=.venv\Scripts\uvicorn.exe
@@ -63,3 +65,14 @@ else
 	@find . -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
 endif
 	@echo "Removed containers, volumes, and caches."
+
+
+
+lint:
+	ruff check app tests
+
+fmt:
+	ruff format app tests && ruff check --fix app tests
+
+commit_check:
+	cz check --rev-range origin/master..HEAD

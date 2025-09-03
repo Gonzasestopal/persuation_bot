@@ -15,6 +15,7 @@ async def lifespan(app: FastAPI):
 
     if settings.USE_INMEMORY_REPO:
         from app.adapters.repositories.memory import InMemoryMessageRepo
+
         app.state.inmem_repo = InMemoryMessageRepo()
 
     if not settings.DISABLE_DB_POOL:
@@ -27,10 +28,11 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        pool = getattr(app.state, "dbpool", None)
+        pool = getattr(app.state, 'dbpool', None)
         if pool is not None:
             await pool.close()
             await pool.wait_closed()
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -39,6 +41,6 @@ app.include_router(router)
 register_exception_handlers(app)
 
 
-@app.get("/", tags=["health"])
+@app.get('/', tags=['health'])
 async def healthcheck():
-    return {"Welcome to debate BOT": "Visit /messages to start conversation"}
+    return {'Welcome to debate BOT': 'Visit /messages to start conversation'}

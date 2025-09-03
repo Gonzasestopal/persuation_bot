@@ -36,29 +36,35 @@ class MessageService(object):
     async def start_conversation(self, topic: str, side: str, message: str = None):
         conversation = await self.repo.create_conversation(topic=topic, side=side)
 
-        await self.repo.add_message(conversation_id=conversation.id, role="user", text=message)
+        await self.repo.add_message(
+            conversation_id=conversation.id, role='user', text=message
+        )
 
         reply = await self.llm.generate(conversation=conversation)
 
-        await self.repo.add_message(conversation_id=conversation.id, role="bot", text=reply)
+        await self.repo.add_message(
+            conversation_id=conversation.id, role='bot', text=reply
+        )
 
         return {
-            "conversation_id": conversation.id,
-            "message": await self.repo.last_messages(conversation_id=conversation.id, limit=self.history_limit * 2),
+            'conversation_id': conversation.id,
+            'message': await self.repo.last_messages(
+                conversation_id=conversation.id, limit=self.history_limit * 2
+            ),
         }
 
     async def continue_conversation(self, message: str, conversation_id: int):
         conversation = await self.repo.get_conversation(conversation_id=conversation_id)
 
         if not conversation:
-            raise ConversationNotFound("conversation_id not found or expired")
+            raise ConversationNotFound('conversation_id not found or expired')
 
         if conversation.expires_at <= datetime.now(timezone.utc):
-            raise ConversationExpired("conversation_id expired")
+            raise ConversationExpired('conversation_id expired')
 
         cid = conversation.id
         await self.repo.touch_conversation(conversation_id=cid)
-        await self.repo.add_message(conversation_id=cid, role="user", text=message)
+        await self.repo.add_message(conversation_id=cid, role='user', text=message)
 
         full_history = await self.repo.all_messages(conversation_id=cid)
 
@@ -69,9 +75,11 @@ class MessageService(object):
             topic=conversation.topic,
         )
 
-        await self.repo.add_message(conversation_id=cid, role="bot", text=reply)
+        await self.repo.add_message(conversation_id=cid, role='bot', text=reply)
 
         return {
-            "conversation_id": cid,
-            "message": await self.repo.last_messages(conversation_id=cid, limit=self.history_limit * 2),
+            'conversation_id': cid,
+            'message': await self.repo.last_messages(
+                conversation_id=cid, limit=self.history_limit * 2
+            ),
         }

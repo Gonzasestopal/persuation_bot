@@ -1,4 +1,4 @@
-from typing import AnyStr, Optional
+from typing import Optional
 
 from pydantic import AnyUrl, Field, field_validator
 from pydantic_settings import BaseSettings
@@ -17,13 +17,13 @@ class Settings(BaseSettings):
     LLM_PROVIDER: Optional[Provider] = Provider.OPENAI
     LLM_MODEL: str = OpenAIModels.GPT_4O
     DIFFICULTY: Optional[Difficulty]
-    USE_INMEMORY_REPO: bool = Field(default=False, env="USE_INMEMORY_REPO")
-    DISABLE_DB_POOL: bool = Field(default=False, env="DISABLE_DB_POOL")
+    USE_INMEMORY_REPO: bool = Field(default=False, env='USE_INMEMORY_REPO')
+    DISABLE_DB_POOL: bool = Field(default=False, env='DISABLE_DB_POOL')
     ANTHROPIC_API_KEY: Optional[str] = None
 
     # Fallback selection
-    PRIMARY_LLM: str = "openai"     # "openai" | "claude"
-    SECONDARY_LLM: str = "anthropic"
+    PRIMARY_LLM: str = 'openai'  # "openai" | "claude"
+    SECONDARY_LLM: str = 'anthropic'
 
     # Behavior
     LLM_TEMPERATURE: float = 0.3
@@ -33,31 +33,30 @@ class Settings(BaseSettings):
     MIN_ASSISTANT_TURNS_BEFORE_VERDICT: int = 5
     REQUIRED_POSITIVE_JUDGEMENTS: int = 2
 
-
     class Config:
-        env_file = ".env"
+        env_file = '.env'
 
-    @field_validator("LLM_PROVIDER", mode="before")
+    @field_validator('LLM_PROVIDER', mode='before')
     def allow_blank(cls, v):
-        if v == "" or v is None:
+        if v == '' or v is None:
             return None
         return v
 
-    @field_validator("DIFFICULTY", mode="before")
+    @field_validator('DIFFICULTY', mode='before')
     def allow_blank_difficulty(cls, v):
-        if v == "" or v is None:
+        if v == '' or v is None:
             return None
         return v
 
-    @field_validator("OPENAI_API_KEY", mode="before")
+    @field_validator('OPENAI_API_KEY', mode='before')
     def allow_blank_openai(cls, v):
-        if v == "" or v is None:
+        if v == '' or v is None:
             return None
         return v
 
-    @field_validator("ANTHROPIC_API_KEY", mode="before")
+    @field_validator('ANTHROPIC_API_KEY', mode='before')
     def allow_blank_anthropic(cls, v):
-        if v == "" or v is None:
+        if v == '' or v is None:
             return None
         return v
 

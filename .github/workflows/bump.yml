@@ -1,0 +1,43 @@
+name: Bump version
+
+on:
+  push:
+    branches: [master]
+
+env:
+  GIT_USER_EMAIL: gonzasestopal@gmail.com
+  GIT_USER_NAME: gonzasestopal
+
+permissions:
+  contents: write    # required to push version bump commits & tags
+  pull-requests: write
+  issues: write      # optional, for commitizen release notes / changelogs
+
+jobs:
+  bump:
+    if: "!startsWith(github.event.head_commit.message, 'bump:')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: cz
+        name: Create bump and changelog
+        uses: commitizen-tools/commitizen-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          git_email: ${{ env.GIT_USER_EMAIL }}
+          git_name: ${{ env.GIT_USER_NAME }}
+          no_raise: 21
+
+  release:
+    needs: bump
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0

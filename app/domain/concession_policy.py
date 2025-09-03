@@ -5,7 +5,9 @@ from app.settings import settings
 
 @dataclass(frozen=True)
 class ConcessionPolicy:
-    min_assistant_turns_before_verdict: int = settings.MIN_ASSISTANT_TURNS_BEFORE_VERDICT
+    min_assistant_turns_before_verdict: int = (
+        settings.MIN_ASSISTANT_TURNS_BEFORE_VERDICT
+    )
     required_positive_judgements: int = settings.REQUIRED_POSITIVE_JUDGEMENTS
 
 

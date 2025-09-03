@@ -1,0 +1,57 @@
+[tool.poetry]
+name = "persuasion-bot"
+version = "0.1.0"
+description = "A debate-oriented chatbot backend."
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.10"
+
+anthropic = "*"
+fastapi = "*"
+httpx = "*"
+huggingface_hub = "*"
+openai = "*"
+protobuf = "*"
+psycopg2-binary = "*"
+psycopg = { version = "3.2.*", extras = ["binary"] }
+psycopg_pool = "*"
+pydantic-settings = "*"
+python-dotenv = "*"
+torch = "*"
+transformers = "*"
+uvicorn = { version = "*", extras = ["standard"] }
+yoyo-database-migrations = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-asyncio = "*"
+pytest-cov = "*"
+ruff = "*"
+commitizen = "~=3.9.0"
+pre-commit = "*"
+
+[tool.pytest.ini_options]
+addopts = "-ra -q --cov=app --cov-report=term-missing"
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py311"
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+combine-as-imports = true
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402"]
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"

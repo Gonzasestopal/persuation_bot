@@ -2,8 +2,12 @@ from typing import Iterable, List, Optional
 
 from openai import OpenAI
 
-from app.adapters.llm.constants import (MEDIUM_SYSTEM_PROMPT, SYSTEM_PROMPT,
-                                        Difficulty, OpenAIModels)
+from app.adapters.llm.constants import (
+    MEDIUM_SYSTEM_PROMPT,
+    SYSTEM_PROMPT,
+    Difficulty,
+    OpenAIModels,
+)
 from app.domain.models import Conversation, Message
 from app.domain.ports.llm import LLMPort
 
@@ -31,10 +35,7 @@ class OpenAIAdapter(LLMPort):
         return SYSTEM_PROMPT
 
     def _build_user_msg(self, topic: str, side: str):
-        return (
-            f"You are debating the topic '{topic}'.\n"
-            f"Take the {side} side.\n\n"
-        )
+        return f"You are debating the topic '{topic}'.\nTake the {side} side.\n\n"
 
     def _request(self, input_msgs: Iterable[dict]) -> str:
         resp = self.client.responses.create(
@@ -48,18 +49,20 @@ class OpenAIAdapter(LLMPort):
     async def generate(self, conversation: Conversation) -> str:
         user_message = self._build_user_msg(conversation.topic, conversation.side)
         msgs = [
-            {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": user_message},
+            {'role': 'system', 'content': self.system_prompt},
+            {'role': 'user', 'content': user_message},
         ]
         return self._request(msgs)
 
     @staticmethod
     def _map_history(messages: List[Message]) -> List[dict]:
-        return [{"role": ("assistant" if m.role == "bot" else "user"), "content": m.message}
-                for m in messages]
+        return [
+            {'role': ('assistant' if m.role == 'bot' else 'user'), 'content': m.message}
+            for m in messages
+        ]
 
     async def debate(self, messages: List[Message]) -> str:
         mapped = self._map_history(messages)
-        input_msgs = [{"role": "system", "content": self.system_prompt}]
+        input_msgs = [{'role': 'system', 'content': self.system_prompt}]
         input_msgs.extend(mapped)
         return self._request(input_msgs)

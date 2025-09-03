@@ -15,9 +15,8 @@ steps = [
         """
         DROP INDEX IF EXISTS idx_conversations_expires_at;
         DROP TABLE conversations;
-        """
+        """,
     ),
-
     step(
         """
         CREATE TABLE messages (
@@ -34,7 +33,6 @@ steps = [
         """
         DROP INDEX IF EXISTS idx_messages_conv_created_at;
         DROP TABLE messages;
-        """
+        """,
     ),
-
 ]

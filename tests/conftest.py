@@ -11,8 +11,8 @@ from app.domain.parser import parse_topic_side
 load_dotenv()
 
 # IMPORTANT: set flags BEFORE importing app/factories/settings so nothing tries to init a DB
-os.environ.setdefault("USE_INMEMORY_REPO", "1")
-os.environ.setdefault("DISABLE_DB_POOL", "1")
+os.environ.setdefault('USE_INMEMORY_REPO', '1')
+os.environ.setdefault('DISABLE_DB_POOL', '1')
 
 from app.adapters.llm.openai import OpenAIAdapter  # adjust import if different
 from app.adapters.repositories.memory import InMemoryMessageRepo
@@ -22,7 +22,7 @@ from app.services.message_service import MessageService
 from app.settings import settings
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope='session')
 def client():
     """
     Use a single in-memory repo for the whole test session and the REAL LLM.
@@ -48,6 +48,6 @@ def client():
         yield c
 
     # Cleanup override (optional)
-    app.dependency_overrides.clear()    # Cleanup override (optional)
+    app.dependency_overrides.clear()  # Cleanup override (optional)
     app.dependency_overrides.clear()
     app.dependency_overrides.clear()

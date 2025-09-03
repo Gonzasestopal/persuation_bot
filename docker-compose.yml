@@ -10,6 +10,9 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_started
+
   db:
     image: postgres:16
     environment:
@@ -24,19 +27,33 @@ services:
       interval: 2s
       timeout: 3s
       retries: 20
+
   migrate:
     build: .
     working_dir: /app
     environment:
       DATABASE_URL: ${DATABASE_URL}
     depends_on:
-        db:
-          condition: service_healthy
+      db:
+        condition: service_healthy
     volumes:
       - .:/app
     command: >
       sh -c "python -m app.migrate"
     restart: "no"
 
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
 volumes:
   db_data:
+  redis_data:

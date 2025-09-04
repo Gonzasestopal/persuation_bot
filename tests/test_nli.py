@@ -40,6 +40,17 @@ def assert_entailment_robust(
     }
 
 
+def assert_consistency(nli, p, h, max_contra=0.25):
+    s = nli.bidirectional_scores(p, h)
+    ph = s['p_to_h']
+    assert ph['contradiction'] <= max_contra, {
+        'assertion': 'CONSISTENCY_P_TO_H',
+        'p→h': ph,
+        'h→p': s['h_to_p'],
+        'agg': s['agg_max'],
+    }
+
+
 @pytest.fixture(scope='module')
 def nli_provider():
     return HFNLIProvider(model_name='MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli')
@@ -295,4 +306,116 @@ def test_premisa_contradiccion_sobre_universalidad_de_dios_pro(
     nli_provider, premise, hypothesis
 ):
     # Afirmación de contradicción simétrica
+    assert_contradiction_robust(nli_provider, premise, hypothesis)
+
+
+@pytest.mark.parametrize(
+    'premise,hypothesis',
+    [
+        (
+            'Los perros NO son los mejores amigos del ser humano.',
+            'Los perros SÍ son los mejores amigos del ser humano. Su lealtad y compañía los convierten en el mejor compañero.',
+        ),
+        (
+            'El trabajo remoto NO es más productivo que el trabajo en oficina.',
+            'El trabajo remoto SÍ es más productivo que el trabajo en oficina; permite mayor concentración y ahorra tiempo de traslado.',
+        ),
+        (
+            'Las redes sociales NO han mejorado la conexión humana.',
+            'Las redes sociales SÍ han mejorado la conexión humana al facilitar el contacto a distancia y mantener relaciones activas.',
+        ),
+    ],
+)
+def test_premisa_negativa_contradiccion(nli_provider, premise, hypothesis):
+    assert_contradiction_robust(nli_provider, premise, hypothesis)
+
+
+@pytest.mark.parametrize(
+    'premise,hypothesis',
+    [
+        (
+            'Los perros NO son los mejores amigos del ser humano.',
+            'No pueden considerarse los mejores amigos porque requieren cuidados constantes, pueden mostrar agresividad y no siempre se adaptan a todos los hogares.',
+        ),
+        (
+            'El trabajo remoto NO es más productivo que el trabajo en oficina.',
+            'No supera la productividad de la oficina porque en casa hay distracciones, se diluyen los horarios y disminuye la coordinación en equipo.',
+        ),
+        (
+            'Las redes sociales NO han mejorado la conexión humana.',
+            'No han mejorado la conexión porque fomentan interacciones superficiales, comparaciones constantes y una menor confianza entre personas.',
+        ),
+    ],
+)
+def test_premisa_negativa_argumentos_entailment(nli_provider, premise, hypothesis):
+    assert_consistency(nli_provider, premise, hypothesis)
+
+
+PREMISE = (
+    'I will gladly take the CON side, arguing that the concept of God existing in all '
+    'of us is not universally applicable. This idea lacks empirical evidence and varies '
+    'greatly across different cultures and belief systems. How do you address the '
+    'diversity of beliefs that contradict this notion?'
+)
+
+
+@pytest.mark.parametrize(
+    'premise,hypothesis',
+    [
+        # Direct logical opposite + short reason
+        (
+            PREMISE,
+            'The concept of God existing in all of us IS universally applicable. Across cultures, people share an inner sense of the divine.',
+        ),
+        # Variant: asserts universality explicitly
+        (
+            PREMISE,
+            'It IS universally true that God exists within every person. Cultural differences reflect expression, not absence, of this shared reality.',
+        ),
+        # Variant: makes a universal claim and counters the 'lack of evidence' point
+        (
+            PREMISE,
+            'God’s presence in everyone IS universally applicable. Convergent spiritual experiences across cultures are evidence for this truth.',
+        ),
+    ],
+)
+def test_premise_contradiction_about_god_universality_softened(
+    nli_provider, premise, hypothesis
+):
+    # Use your symmetry-aware contradiction assertion (robust to direction ties)
+    assert_contradiction_robust(nli_provider, premise, hypothesis)
+
+
+PREMISE = (
+    'I will gladly take the PRO side, arguing that God exists in all of us. '
+    'This perspective suggests a universal divinity that connects humanity, '
+    'fostering empathy and moral consciousness. It aligns with various spiritual '
+    'and philosophical traditions that emphasize inner divinity and interconnectedness.'
+)
+
+
+@pytest.mark.parametrize(
+    'premise,hypothesis',
+    [
+        # Clear negation of universality
+        (
+            PREMISE,
+            'God does NOT exist in all of us. Belief in a universal divinity is not shared across cultures and has no empirical support.',
+        ),
+        # Emphasizes diversity of belief
+        (
+            PREMISE,
+            'It is NOT true that divinity is universal. Different religions and philosophies reject the notion that God is present in every person.',
+        ),
+        # Counters the moral/empathetic link
+        (
+            PREMISE,
+            'God’s presence is NOT within all people. Human morality and empathy arise from social and evolutionary factors, not divine universality.',
+        ),
+    ],
+)
+def test_premise_contradiction_about_god_universality_pro_softened(
+    nli_provider, premise, hypothesis
+):
+    # Symmetry-aware contradiction assertion
     assert_contradiction_robust(nli_provider, premise, hypothesis)

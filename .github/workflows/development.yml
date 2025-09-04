@@ -24,6 +24,7 @@ permissions:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    environment: dev
     steps:
       - uses: actions/checkout@v4
 
@@ -60,6 +61,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    environment: dev
     steps:
       - uses: actions/checkout@v4
 
@@ -93,6 +95,7 @@ jobs:
 
   commit_lint:
     runs-on: ubuntu-latest
+    environment: dev
     steps:
       - uses: actions/checkout@v4
         with:

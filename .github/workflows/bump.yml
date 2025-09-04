@@ -41,3 +41,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.cz.outputs.version }}
+          name: Release ${{ steps.cz.outputs.version }}
+          body: |
+            🚀 Version ${{ steps.cz.outputs.version }} released
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

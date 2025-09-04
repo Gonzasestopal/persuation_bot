@@ -419,3 +419,82 @@ def test_premise_contradiction_about_god_universality_pro_softened(
 ):
     # Symmetry-aware contradiction assertion
     assert_contradiction_robust(nli_provider, premise, hypothesis)
+
+
+MIN_NEU = 0.40  # piso razonable para neutral
+NEU_MARGIN = 0.06  # neutral debe ganar por este margen a E y C
+
+
+def assert_neutral_robust(nli, p, h, min_neu=MIN_NEU, margin=NEU_MARGIN):
+    s = nli.bidirectional_scores(p, h)
+    ph, hp = s['p_to_h'], s['h_to_p']
+
+    def _ok(d):
+        return (
+            d['neutral'] >= min_neu
+            and d['neutral'] >= d['entailment'] + margin
+            and d['neutral'] >= d['contradiction'] + margin
+        )
+
+    assert _ok(ph) and _ok(hp), {
+        'assertion': 'NEUTRAL_BOTH_DIRECTIONS',
+        'p→h': ph,
+        'h→p': hp,
+        'agg': s['agg_max'],
+    }
+
+
+# --- Pares aleatorios: deberían ser neutrales ------------------------------
+
+
+@pytest.mark.parametrize(
+    'premise,hypothesis',
+    [
+        (
+            'Las montañas suelen formarse por la colisión de placas tectónicas.',
+            'Los helados se derriten más rápido bajo el sol del mediodía.',
+        ),
+        (
+            'La capital de Perú es Lima.',
+            'Los perros pueden aprender trucos con entrenamiento y paciencia.',
+        ),
+        (
+            'El ajedrez se juega en un tablero de 8x8 casillas.',
+            'Las naranjas son una buena fuente de vitamina C.',
+        ),
+        (
+            'El océano Atlántico separa América de Europa y África.',
+            'Los lápices de colores a menudo se venden en cajas de doce.',
+        ),
+        (
+            'Una novela gráfica combina texto con ilustraciones secuenciales.',
+            'Los trenes de carga transportan minerales a largas distancias.',
+        ),
+        (
+            'La fotosíntesis convierte la luz solar en energía química.',
+            'Los contratos de alquiler suelen renovarse una vez al año.',
+        ),
+        (
+            'Marte tiene dos lunas llamadas Fobos y Deimos.',
+            'Las recetas de pan frecuentemente requieren levadura o masa madre.',
+        ),
+        (
+            'Los huracanes se clasifican con la escala Saffir-Simpson.',
+            'Un teclado mecánico ofrece mejor respuesta táctil al escribir.',
+        ),
+        (
+            'El IVA es un impuesto al consumo presente en varios países.',
+            'Los auriculares inalámbricos se cargan en estuches magnéticos.',
+        ),
+        (
+            'El pingüino emperador habita principalmente en la Antártida.',
+            'Las tarjetas gráficas modernas aceleran ciertos algoritmos de aprendizaje automático.',
+        ),
+        (
+            'Los eclipses solares ocurren cuando la Luna se interpone entre el Sol y la Tierra.',
+            'Los rompecabezas 3D ayudan a desarrollar habilidades espaciales.',
+        ),
+    ],
+)
+def test_pares_aleatorios_neutrales(nli_provider, premise, hypothesis):
+    assert_neutral_robust(nli_provider, premise, hypothesis)

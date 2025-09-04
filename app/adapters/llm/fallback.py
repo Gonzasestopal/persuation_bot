@@ -5,6 +5,7 @@ import asyncio
 from typing import Awaitable, Callable, List, Optional, Tuple
 
 from app.domain import errors as de
+from app.domain.concession_policy import DebateState
 from app.domain.models import Conversation, Message
 from app.domain.ports.llm import LLMPort
 
@@ -26,11 +27,11 @@ class FallbackLLM(LLMPort):
         self.log = logger or (lambda _msg: None)
 
     # ---- Public API expected by your service ----
-    async def generate(self, conversation: Conversation) -> str:
-        return await self._invoke(lambda p: p.generate(conversation))
+    async def generate(self, conversation: Conversation, state: DebateState) -> str:
+        return await self._invoke(lambda p: p.generate(conversation, state))
 
-    async def debate(self, messages: List[Message]) -> str:
-        return await self._invoke(lambda p: p.debate(messages))
+    async def debate(self, messages: List[Message], state: DebateState) -> str:
+        return await self._invoke(lambda p: p.debate(messages, state))
 
     # ---- Internals ----
     async def _invoke(self, fn_builder: Callable[[LLMPort], Awaitable[str]]) -> str:

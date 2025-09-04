@@ -13,8 +13,10 @@ from app.adapters.llm.constants import (
 from app.adapters.llm.dummy import DummyLLMAdapter
 from app.adapters.llm.fallback import FallbackLLM
 from app.adapters.llm.openai import OpenAIAdapter
+from app.domain.concession_policy import DebateState
 from app.domain.errors import ConfigError
 from app.domain.parser import parse_topic_side
+from app.domain.ports.llm import LLMPort
 from app.repositories.base import get_repo
 from app.services.concession_service import ConcessionService
 from app.services.message_service import MessageService
@@ -115,17 +117,29 @@ def get_llm_singleton():
 
 
 @lru_cache(maxsize=1)
-def get_concession_singleton():
-    # Share the LLM singleton inside the ConcessionService singleton
-    llm = get_llm_singleton()
-    return ConcessionService(llm=llm)
+def get_state_store() -> dict[int, DebateState]:
+    # single, per-process store
+    return {}
+
+
+def get_concession_singleton(
+    store=Depends(get_state_store),
+    llm: LLMPort = Depends(get_llm_singleton),
+) -> ConcessionService:
+    # IMPORTANT: pass the shared store
+    return ConcessionService(llm=llm, state=store)
 
 
 def get_service(
     repo=Depends(get_repo),
-    llm=Depends(get_llm_singleton),
-    concession=Depends(get_concession_singleton),
+    llm: LLMPort = Depends(get_llm_singleton),
+    concession: ConcessionService = Depends(get_concession_singleton),
+    store=Depends(get_state_store),
 ) -> MessageService:
     return MessageService(
-        parser=parse_topic_side, repo=repo, llm=llm, concession_service=concession
+        parser=parse_topic_side,
+        repo=repo,
+        llm=llm,
+        concession_service=concession,
+        state_store=store,
     )

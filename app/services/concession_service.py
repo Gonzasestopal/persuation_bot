@@ -34,6 +34,28 @@ class Stance(str, Enum):
     CON = 'CON'
 
 
+AFTER_END_MESSAGE = 'The debate has already ended. Please start a new conversation if you want to debate another topic.'
+END_MARKERS = (
+    'Match concluded.',
+    'match concluded',
+    'debate concluded',
+    'debate is over',
+)
+
+
+def _enforce_end_control(text: str, match_concluded: bool) -> str:
+    """
+    If debate already ended, return fixed after-end message.
+    If ongoing, strip any end phrases the LLM might produce.
+    """
+    if match_concluded:
+        return AFTER_END_MESSAGE
+    sanitized = text
+    for m in END_MARKERS:
+        sanitized = sanitized.replace(m, '')
+    return sanitized.strip()
+
+
 # ----------------------------- Heurísticas ----------------------------------
 
 # márgenes alineados con tus tests
@@ -78,10 +100,11 @@ class ConcessionService:
     def __init__(
         self,
         llm: LLMPort,
-        nli: Optional[HFNLIProvider] = None,
         config: _NLIConfig = _NLIConfig(),
+        nli: Optional[HFNLIProvider] = None,
+        state: Dict[int, DebateState] = None,
     ) -> None:
-        self._state: Dict[int, DebateState] = {}  # conversation_id -> DebateState
+        self._state = state
         self.llm = llm
         self.nli = nli or HFNLIProvider(model_name=config.model_name)
         self.config = config
@@ -99,7 +122,7 @@ class ConcessionService:
     ):
         stance = Stance(side.upper())  # "PRO" o "CON"
 
-        state = self._get_state(conversation_id)
+        state = self._get_state(conversation_id, stance)
         _print(
             '[analyze] conv_id=',
             conversation_id,
@@ -108,6 +131,10 @@ class ConcessionService:
             ' topic=',
             _trunc(topic),
         )
+
+        if state.match_concluded:
+            _print('[analyze] already ended → return AFTER_END_MESSAGE')
+            return AFTER_END_MESSAGE
 
         mapped = self._map_history(messages)
         out = self.judge_last_two_messages(
@@ -127,8 +154,11 @@ class ConcessionService:
             return self._build_verdict()
 
         _print('[analyze] calling llm.debate() with', len(messages), 'msgs')
-        reply = await self.llm.debate(messages=messages)
+        reply = await self.llm.debate(messages=messages, state=state)
         _print('[analyze] llm reply chars=', len(reply))
+
+        reply = _enforce_end_control(reply, match_concluded=False)
+
         state.assistant_turns += 1
 
         if state.maybe_conclude():
@@ -146,8 +176,8 @@ class ConcessionService:
             for m in messages
         ]
 
-    def _get_state(self, conversation_id: int) -> DebateState:
-        return self._state.setdefault(conversation_id, DebateState())
+    def _get_state(self, conversation_id: int, stance: str) -> DebateState:
+        return self._state.setdefault(conversation_id, DebateState(stance=stance))
 
     @staticmethod
     def _drop_questions(text: str) -> str:

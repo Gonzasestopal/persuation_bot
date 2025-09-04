@@ -73,6 +73,27 @@ def test_returns_422_on_invalid_start(client):
     assert 'topic' in detail.lower() or 'side' in detail.lower()
 
 
+def test_returns_422_on_exceeding_topic_length(client):
+    """
+    Starting a conversation with a 'Topic' longer than allowed (e.g. >50 chars)
+    should raise a ValueError / validation error -> route returns 422.
+    """
+    too_long_topic = 'A' * 101  # 101 chars, exceeds limit
+
+    r = client.post(
+        '/messages',
+        json={
+            'conversation_id': None,
+            'message': f'Topic: {too_long_topic}\nSide: PRO',
+        },
+    )
+    assert r.status_code == 422, r.text
+
+    # Optional: check detail mentions "topic" or "length"
+    detail = r.json().get('detail', '')
+    assert 'topic' in detail.lower() or 'length' in detail.lower()
+
+
 def test_returns_404_on_unknown_conversation_id(client):
     """
     Continuing a conversation with a non-existent conversation_id should raise

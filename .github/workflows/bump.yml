@@ -63,7 +63,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.bump.outputs.tag }}                # e.g. v0.1.0
+          tag_name: v${{ needs.bump.outputs.tag }}                # e.g. v0.1.0
           name: Release v${{ needs.bump.outputs.version }}       # e.g. v0.1.0
           body: |
             🚀 Version ${{ needs.bump.outputs.version }} released

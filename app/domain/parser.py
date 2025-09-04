@@ -5,6 +5,8 @@ from app.domain.errors import InvalidContinuationMessage, InvalidStartMessage
 
 _ALLOWED = {'pro', 'con'}
 
+TOPIC_MAX_LENGTH = 100
+
 
 _TOPIC_RE = re.compile(r'(?i)\btopic\s*:\s*(?P<topic>.+?)(?=,?\s*\bside\b|$)')
 _SIDE_RE = re.compile(r'(?i)\bside\s*:\s*(?P<side>\w+)')
@@ -32,6 +34,9 @@ def parse_topic_side(text: str) -> Tuple[str, str]:
         raise InvalidStartMessage("side must be 'pro' or 'con'")
     if not topic:
         raise InvalidStartMessage('topic must not be empty')
+
+    if len(topic) >= TOPIC_MAX_LENGTH:
+        raise InvalidStartMessage('topic must be less than 100 characters')
 
     return topic, side
 

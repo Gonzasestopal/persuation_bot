@@ -247,7 +247,7 @@ async def test_analyze_conversation_increments_on_contradiction_and_concludes(
 
     # Inject dummy state that concludes after one positive judgement
     conv_id = 42
-    svc._state[conv_id] = DummyState()
+    svc.state_store.save(conv_id, DummyState())
 
     msgs = make_msgs()
     # The service expects Message objects with .role and .message;
@@ -258,7 +258,7 @@ async def test_analyze_conversation_increments_on_contradiction_and_concludes(
 
     # Since maybe_conclude() returns True after first concession, analyze_conversation returns verdict string
     assert isinstance(result, str)
-    assert svc._state[conv_id].positive_judgements == 1
+    assert svc.state_store.get(conv_id).positive_judgements == 1
 
 
 def test_short_user_blocks_concession_on_thesis_contradiction():

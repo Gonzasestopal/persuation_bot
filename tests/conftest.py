@@ -5,6 +5,7 @@ import pytest
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 
+from app.adapters.repositories.memory_debate_store import InMemoryDebateStore
 from app.domain.parser import parse_topic_side
 
 # Load env first (OPENAI_API_KEY, etc.)
@@ -38,7 +39,7 @@ def client():
         temperature=0.3,
     )
 
-    state_store = {}
+    state_store = InMemoryDebateStore()
 
     service = MessageService(
         parser=parse_topic_side, repo=repo, llm=llm, state_store=state_store

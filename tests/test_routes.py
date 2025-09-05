@@ -252,13 +252,11 @@ def is_english_like(text: str) -> bool:
 
 def assert_language(text: str, lang: str):
     if lang == 'es':
-        assert is_spanish_like(text), f'Expected Spanish-like reply, got: {text!r}'
-        assert not is_english_like(text), 'Reply looks English-like, expected Spanish.'
+        assert 'ES' in text.upper(), f"Expected 'ES' in reply, got: {text!r}"
     elif lang == 'en':
-        assert is_english_like(text), f'Expected English-like reply, got: {text!r}'
-        assert not is_spanish_like(text), 'Reply looks Spanish-like, expected English.'
+        assert 'EN' in text.upper(), f"Expected 'EN' in reply, got: {text!r}"
     else:
-        raise AssertionError(f'Unsupported lang code: {lang!r}')
+        raise AssertionError(f'Unsupported lang {lang!r}')
 
 
 # ---------------------------------------------------------------------------

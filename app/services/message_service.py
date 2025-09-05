@@ -50,6 +50,7 @@ class MessageService(object):
             conversation_id=conversation.id,
             stance=stance,
             topic=conversation.topic,
+            lang=None,
         )
 
         raw_reply = await self.llm.generate(conversation=conversation, state=state)

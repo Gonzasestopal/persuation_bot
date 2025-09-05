@@ -21,7 +21,12 @@ class InMemoryDebateStore(DebateStorePort):
         return deepcopy(s) if s else None
 
     def create(
-        self, conversation_id: int, *, stance: Stance, topic: str, lang: str = 'es'
+        self,
+        conversation_id: int,
+        *,
+        stance: Stance,
+        topic: str,
+        lang: str,
     ) -> DebateState:
         if conversation_id in self._db:
             raise ValueError(f'DebateState {conversation_id} already exists')

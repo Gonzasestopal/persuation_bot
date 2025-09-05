@@ -15,7 +15,6 @@ httpx = "*"
 huggingface_hub = "*"
 openai = "*"
 protobuf = "*"
-psycopg2-binary = "*"
 psycopg = { version = "3.2.*", extras = ["binary"] }
 psycopg_pool = "*"
 pydantic-settings = "*"

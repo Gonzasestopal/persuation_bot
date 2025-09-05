@@ -18,17 +18,17 @@ class MessageService(object):
         repo: MessageRepoPort,
         concession_service: Optional[ConcessionService] = None,
         llm: Optional[LLMPort] = None,
-        state_store: Optional[DebateStorePort] = None,
+        debate_store: Optional[DebateStorePort] = None,
         history_limit=5,
     ):
         self.parser = parser
         self.repo = repo
-        self.state_store = state_store
+        self.debate_store = debate_store
         self.history_limit = history_limit
         self.llm = llm
         self.concession_service = concession_service or ConcessionService(
             llm=llm,
-            state_store=self.state_store,
+            debate_store=self.debate_store,
         )
 
     async def handle(self, message: str, conversation_id: Optional[int] = None):
@@ -46,7 +46,7 @@ class MessageService(object):
             conversation_id=conversation.id, role='user', text=message
         )
 
-        state = self.state_store.create(
+        state = self.debate_store.create(
             conversation_id=conversation.id,
             stance=stance,
         )
@@ -57,7 +57,7 @@ class MessageService(object):
         state.lang = lang or 'en'
         state.lang_locked = True
         state.assistant_turns += 1
-        self.state_store.save(conversation_id=conversation.id, state=state)
+        self.debate_store.save(conversation_id=conversation.id, state=state)
 
         await self.repo.add_message(
             conversation_id=conversation.id, role='bot', text=clean_reply

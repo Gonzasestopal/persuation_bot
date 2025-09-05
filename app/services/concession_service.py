@@ -34,18 +34,18 @@ class ConcessionService:
         nli: Optional[NLIPort] = None,
         nli_config: Optional[NLIConfig] = None,
         scoring: Optional[ScoringConfig] = None,
-        state_store: Optional[DebateStorePort] = None,
+        debate_store: Optional[DebateStorePort] = None,
     ) -> None:
         self.nli_config = nli_config or NLIConfig()
         self.scoring = scoring or ScoringConfig()
         self.nli = nli
         self.llm = llm
-        self.state_store = state_store
+        self.debate_store = debate_store
 
     async def analyze_conversation(
         self, messages: List[Message], stance: Stance, conversation_id: int, topic: str
     ):
-        state = self.state_store.get(conversation_id)
+        state = self.debate_store.get(conversation_id)
         if state is None:
             raise RuntimeError(
                 f'DebateState missing for conversation_id={conversation_id}'
@@ -79,11 +79,11 @@ class ConcessionService:
                 trunc(out.get('user_text_sample', ''), 80),
                 trunc(out.get('bot_text_sample', ''), 80),
             )
-            self.state_store.save(conversation_id=conversation_id, state=state)
+            self.debate_store.save(conversation_id=conversation_id, state=state)
 
         if getattr(state, 'maybe_conclude', lambda: False)():
             state.match_concluded = True
-            self.state_store.save(conversation_id=conversation_id, state=state)
+            self.debate_store.save(conversation_id=conversation_id, state=state)
             return build_verdict(state=state)
 
         reply = await self.llm.debate(messages=messages, state=state)
@@ -92,10 +92,10 @@ class ConcessionService:
         state.assistant_turns += 1
         if getattr(state, 'maybe_conclude', lambda: False)():
             state.match_concluded = True
-            self.state_store.save(conversation_id=conversation_id, state=state)
+            self.debate_store.save(conversation_id=conversation_id, state=state)
             return build_verdict(state=state)
 
-        self.state_store.save(conversation_id=conversation_id, state=state)
+        self.debate_store.save(conversation_id=conversation_id, state=state)
         return reply.strip()
 
     # -------- core judge --------

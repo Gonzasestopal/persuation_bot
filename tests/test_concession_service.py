@@ -1,9 +1,10 @@
 import pytest
 
+from app.domain.nli.scoring import ScoringConfig
 from app.domain.ports.llm import (
     LLMPort,
 )  # only for typing; any object with .debate(...) works
-from app.services.concession_service import ConcessionService, Stance, _NLIConfig
+from app.services.concession_service import ConcessionService, NLIConfig, Stance
 
 # ---------------------------- Fakes / Helpers ------------------------------
 
@@ -107,7 +108,9 @@ def test_thesis_contradiction_triggers_concession():
         mk_dir(0.10, 0.70, 0.82),
     )
     nli = FakeNLI([pair_neutral, thesis_contra])
-    svc = ConcessionService(llm=FakeLLM(), nli=nli, config=_NLIConfig())
+    svc = ConcessionService(
+        llm=FakeLLM(), nli=nli, nli_config=NLIConfig(), scoring=ScoringConfig()
+    )
     conv = [
         {
             'role': 'assistant',
@@ -144,7 +147,9 @@ def test_thesis_support_same_no_concession():
         mk_dir(0.82, 0.50, 0.10),
     )
     nli = FakeNLI([pair_neutral, thesis_support])
-    svc = ConcessionService(llm=FakeLLM(), nli=nli, config=_NLIConfig())
+    svc = ConcessionService(
+        llm=FakeLLM(), nli=nli, nli_config=NLIConfig(), scoring=ScoringConfig()
+    )
     conv = [
         {
             'role': 'assistant',
@@ -182,7 +187,9 @@ def test_pairwise_contradiction_fallback():
     nli = FakeNLI(
         [pair_contra, thesis_neutral]
     )  # note: pair is computed first in service
-    svc = ConcessionService(llm=FakeLLM(), nli=nli, config=_NLIConfig())
+    svc = ConcessionService(
+        llm=FakeLLM(), nli=nli, nli_config=NLIConfig(), scoring=ScoringConfig()
+    )
     # ensure user has >= 30 chars/words; our service checks length >= 30 for fallback
     conv = [
         {
@@ -214,7 +221,9 @@ def test_underdetermined_no_concession():
         mk_dir(0.24, 0.66, 0.10),
     )
     nli = FakeNLI([pair_neutral, thesis_neutral])
-    svc = ConcessionService(llm=FakeLLM(), nli=nli, config=_NLIConfig())
+    svc = ConcessionService(
+        llm=FakeLLM(), nli=nli, nli_config=NLIConfig(), scoring=ScoringConfig()
+    )
     conv = [
         {
             'role': 'assistant',
@@ -243,7 +252,9 @@ async def test_analyze_conversation_increments_on_contradiction_and_concludes(
             mk_bidir(mk_dir(0.10, 0.75, 0.80), mk_dir(0.10, 0.70, 0.82)),
         ]
     )
-    svc = ConcessionService(llm=FakeLLM(), nli=nli, config=_NLIConfig())
+    svc = ConcessionService(
+        llm=FakeLLM(), nli=nli, nli_config=NLIConfig(), scoring=ScoringConfig()
+    )
 
     # Inject dummy state that concludes after one positive judgement
     conv_id = 42
@@ -278,8 +289,8 @@ def test_short_user_blocks_concession_on_thesis_contradiction():
     )
 
     nli = FakeNLI([pair_neutral, thesis_contra])
-    cfg = _NLIConfig(min_user_words=8, strict_contra_threshold=0.90)
-    svc = ConcessionService(llm=FakeLLM(), nli=nli, config=cfg)
+    cfg = ScoringConfig(min_user_words=8, strict_contra_threshold=0.90)
+    svc = ConcessionService(llm=FakeLLM(), nli=nli, scoring=cfg)
 
     conv = [
         # Asistente válido (≥10 palabras alfabéticas)
@@ -317,8 +328,8 @@ def test_strong_thesis_contradiction_overrides_min_words():
     )
 
     nli = FakeNLI([pair_neutral, thesis_contra_strong])
-    cfg = _NLIConfig(min_user_words=8, strict_contra_threshold=0.90)
-    svc = ConcessionService(llm=FakeLLM(), nli=nli, config=cfg)
+    cfg = ScoringConfig(min_user_words=8, strict_contra_threshold=0.90)
+    svc = ConcessionService(llm=FakeLLM(), nli=nli, scoring=cfg)
 
     conv = [
         {
@@ -355,8 +366,8 @@ def test_short_user_blocks_pairwise_fallback():
     nli = FakeNLI(
         [pair_contra, thesis_neutral]
     )  # pair se evalúa primero en el servicio
-    cfg = _NLIConfig(min_user_words=8, strict_contra_threshold=0.90)
-    svc = ConcessionService(llm=FakeLLM(), nli=nli, config=cfg)
+    cfg = ScoringConfig(min_user_words=8, strict_contra_threshold=0.90)
+    svc = ConcessionService(llm=FakeLLM(), nli=nli, scoring=cfg)
 
     conv = [
         {
@@ -525,6 +536,10 @@ def test_sentence_splitting_and_max_contra():
     out = svc.judge_last_two_messages(
         conv, Stance.PRO, topic='The universe requires a creator'
     )
+    # Because the second sentence is strongly contradictory, service should catch it
+    assert out['alignment'] == 'OPPOSITE'
+    assert out['concession'] is True
+    assert out['reason'] == 'thesis_opposition'
     # Because the second sentence is strongly contradictory, service should catch it
     assert out['alignment'] == 'OPPOSITE'
     assert out['concession'] is True

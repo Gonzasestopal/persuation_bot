@@ -2,13 +2,12 @@ import logging
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from app.adapters.nli.hf_nli import HFNLIProvider
-from app.adapters.repositories.memory_debate_store import InMemoryDebateStore
 from app.domain.models import Message
 from app.domain.nli.config import NLIConfig
 from app.domain.nli.scoring import ScoringConfig
 from app.domain.ports.debate_store import DebateStorePort
 from app.domain.ports.llm import LLMPort
+from app.domain.ports.nli import NLIPort
 from app.domain.verdicts import after_end_message, build_verdict
 from app.nli.ops import (
     agg_max,
@@ -37,16 +36,16 @@ class ConcessionService:
     def __init__(
         self,
         llm: LLMPort,
-        nli: Optional[HFNLIProvider] = None,
+        nli: Optional[NLIPort] = None,
         nli_config: Optional[NLIConfig] = None,
         scoring: Optional[ScoringConfig] = None,
         state_store: Optional[DebateStorePort] = None,
     ) -> None:
         self.nli_config = nli_config or NLIConfig()
         self.scoring = scoring or ScoringConfig()
-        self.nli = nli or HFNLIProvider(model_name=self.nli_config.model_name)
+        self.nli = nli
         self.llm = llm
-        self.state_store = state_store or InMemoryDebateStore()
+        self.state_store = state_store
 
     async def analyze_conversation(
         self, messages: List[Message], side: Stance, conversation_id: int, topic: str
@@ -78,6 +77,14 @@ class ConcessionService:
 
         if out and out.get('concession'):
             state.positive_judgements += 1
+            logger.debug(
+                "[concession] conv_id=%s +1 concession (total=%s) | reason=%s | user='%s' | bot='%s'",
+                conversation_id,
+                state.positive_judgements,
+                out.get('reason'),
+                trunc(out.get('user_text_sample', ''), 80),
+                trunc(out.get('bot_text_sample', ''), 80),
+            )
             self.state_store.save(conversation_id=conversation_id, state=state)
 
         if getattr(state, 'maybe_conclude', lambda: False)():
@@ -183,7 +190,7 @@ class ConcessionService:
             user_wc >= self.scoring.min_user_words
             or thesis_contra_p >= self.scoring.strict_contra_threshold
         ):
-            return self._mk_result(
+            result = self._mk_result(
                 stance,
                 'OPPOSITE',
                 True,
@@ -194,77 +201,89 @@ class ConcessionService:
                 bot_txt,
                 topic,
             )
+        else:
+            supported, _ = has_support_either_direction(
+                thesis_scores, self.scoring, logger=logger
+            )
+            if supported:
+                result = self._mk_result(
+                    stance,
+                    'SAME',
+                    False,
+                    'same_stance',
+                    pair_scores,
+                    thesis_scores,
+                    user_txt,
+                    bot_txt,
+                    topic,
+                )
 
-        supported, _ = has_support_either_direction(
-            thesis_scores, self.scoring, logger=logger
+            elif (
+                on_topic
+                and is_contradiction_symmetric(pair_scores, self.scoring, logger=logger)
+                and user_wc >= self.scoring.min_user_words
+            ):
+                result = self._mk_result(
+                    stance,
+                    'OPPOSITE',
+                    True,
+                    'pairwise_opposition',
+                    pair_scores,
+                    thesis_scores,
+                    user_txt,
+                    bot_txt,
+                    topic,
+                )
+
+            elif user_wc < self.scoring.min_user_words:
+                result = self._mk_result(
+                    stance,
+                    'UNKNOWN',
+                    False,
+                    'too_short',
+                    pair_scores,
+                    thesis_scores,
+                    user_txt,
+                    bot_txt,
+                    topic,
+                )
+
+            elif not on_topic:
+                result = self._mk_result(
+                    stance,
+                    'UNKNOWN',
+                    False,
+                    'off_topic',
+                    pair_scores,
+                    thesis_scores,
+                    user_txt,
+                    bot_txt,
+                    topic,
+                )
+            else:
+                result = self._mk_result(
+                    stance,
+                    'UNKNOWN',
+                    False,
+                    'underdetermined',
+                    pair_scores,
+                    thesis_scores,
+                    user_txt,
+                    bot_txt,
+                    topic,
+                )
+
+        logger.debug(
+            "[judge] stance=%s align=%s concession=%s reason=%s | user='%s' | bot='%s'",
+            stance.value,
+            result['alignment'],
+            result['concession'],
+            result['reason'],
+            trunc(user_txt, 80),
+            trunc(bot_txt, 80),
         )
-        if supported:
-            return self._mk_result(
-                stance,
-                'SAME',
-                False,
-                'same_stance',
-                pair_scores,
-                thesis_scores,
-                user_txt,
-                bot_txt,
-                topic,
-            )
 
-        if (
-            on_topic
-            and is_contradiction_symmetric(pair_scores, self.scoring, logger=logger)
-            and user_wc >= self.scoring.min_user_words
-        ):
-            return self._mk_result(
-                stance,
-                'OPPOSITE',
-                True,
-                'pairwise_opposition',
-                pair_scores,
-                thesis_scores,
-                user_txt,
-                bot_txt,
-                topic,
-            )
-
-        if user_wc < self.scoring.min_user_words:
-            return self._mk_result(
-                stance,
-                'UNKNOWN',
-                False,
-                'too_short',
-                pair_scores,
-                thesis_scores,
-                user_txt,
-                bot_txt,
-                topic,
-            )
-
-        if not on_topic:
-            return self._mk_result(
-                stance,
-                'UNKNOWN',
-                False,
-                'off_topic',
-                pair_scores,
-                thesis_scores,
-                user_txt,
-                bot_txt,
-                topic,
-            )
-
-        return self._mk_result(
-            stance,
-            'UNKNOWN',
-            False,
-            'underdetermined',
-            pair_scores,
-            thesis_scores,
-            user_txt,
-            bot_txt,
-            topic,
-        )
+        return result
 
     @staticmethod
     def _mk_result(

@@ -1,6 +1,8 @@
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
+from app.domain.ports.nli import NLIPort
+
 # Normaliza posibles variantes de etiquetas que traen algunos modelos
 _LABEL_ALIAS = {
     'entailment': 'entailment',
@@ -12,7 +14,7 @@ _LABEL_ALIAS = {
 }
 
 
-class HFNLIProvider:
+class HFNLIProvider(NLIPort):
     def __init__(
         self,
         model_name: str = 'MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli',

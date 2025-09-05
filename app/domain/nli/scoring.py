@@ -4,8 +4,9 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class ScoringConfig:
     # Contradiction thresholds
-    contradiction_threshold: float = 0.70
-    strict_contra_threshold: float = 0.90
+    contradiction_threshold: float = 0.65
+    strict_contra_threshold: float = 0.85
+    contradiction_threshold_soft: float = 0.60
     eps_contra_vs_neu: float = 0.03
     min_delta_con_neu: float = 0.15
 
@@ -18,7 +19,7 @@ class ScoringConfig:
 
     # On-topic filters
     topic_signal_min: float = 0.30
-    topic_neu_max: float = 0.75
+    topic_neu_max: float = 0.72
 
     # Misc
     min_user_words: int = 8

@@ -276,7 +276,7 @@ class ConcessionService:
             align = 'OPPOSITE'
         else:
             supported, _dir = self._has_support_either_direction(thesis_scores)
-            align = 'SAME' if supported else 'UNCLEAR'
+            align = 'SAME' if supported else 'UNKNOWN'
 
         logger.debug('[align] thesis=%s', thesis)
         logger.debug(
@@ -411,7 +411,7 @@ class ConcessionService:
             logger.debug('[judge] DECISION: too_short')
             return {
                 'passed_stance': stance.value,
-                'alignment': 'UNCLEAR',
+                'alignment': 'UNKNOWN',
                 'concession': False,
                 'reason': 'too_short',
                 'reasons': ['too_short'],
@@ -427,7 +427,7 @@ class ConcessionService:
             logger.debug('[judge] DECISION: off_topic')
             return {
                 'passed_stance': stance.value,
-                'alignment': 'UNCLEAR',
+                'alignment': 'UNKNOWN',
                 'concession': False,
                 'reason': 'off_topic',
                 'reasons': ['off_topic'],
@@ -442,7 +442,7 @@ class ConcessionService:
         logger.debug('[judge] DECISION: underdetermined')
         return {
             'passed_stance': stance.value,
-            'alignment': 'UNCLEAR',
+            'alignment': 'UNKNOWN',
             'concession': False,
             'reason': 'underdetermined',
             'reasons': ['underdetermined'],

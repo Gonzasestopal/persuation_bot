@@ -32,18 +32,35 @@ def mk_bidir(ph, hp):
 
 class FakeNLI:
     """
-    Returns a preprogrammed sequence of scores for successive calls to
-    bidirectional_scores(premise, hypothesis). We rely on call order:
-      1) pair (assistant vs user)
-      2) thesis (thesis vs user)
+    Devuelve una secuencia preprogramada y, si se agota, reutiliza el último
+    paquete (repeat_last=True). Opcionalmente, puede devolver una lista
+    específica por oración (per_sentence) que consumirá primero.
     """
 
-    def __init__(self, sequence):
+    def __init__(self, sequence, repeat_last=True, per_sentence=None):
         self.seq = list(sequence)
+        self.repeat_last = repeat_last
+        self.per_sentence = list(per_sentence) if per_sentence else None
+        self._ps_idx = 0
+        self._last_pkg = None
 
     def bidirectional_scores(self, premise, hypothesis):
-        assert self.seq, 'FakeNLI: no more scripted scores'
-        return self.seq.pop(0)
+        # Si hay paquetes por oración, consúmelos primero (útil para _max_contra_sentence)
+        if self.per_sentence is not None and self._ps_idx < len(self.per_sentence):
+            pkg = self.per_sentence[self._ps_idx]
+            self._ps_idx += 1
+            self._last_pkg = pkg
+            return pkg
+
+        if self.seq:
+            pkg = self.seq.pop(0)
+            self._last_pkg = pkg
+            return pkg
+
+        if self.repeat_last and self._last_pkg is not None:
+            return self._last_pkg
+
+        raise AssertionError('FakeNLI: no more scripted scores')
 
 
 class DummyState:
@@ -51,6 +68,7 @@ class DummyState:
         self.positive_judgements = 0
         self.assistant_turns = 0
         self.match_concluded = False
+        self.lang = 'en'
 
     def maybe_conclude(self):
         # conclude once we record a concession (used in analyze_conversation test)
@@ -122,8 +140,8 @@ def test_thesis_support_same_no_concession():
         mk_dir(0.12, 0.80, 0.08),
     )
     thesis_support = mk_bidir(
-        mk_dir(0.20, 0.65, 0.15),  # p→h weaker
-        mk_dir(0.78, 0.55, 0.10),  # h→p strong entailment
+        mk_dir(0.20, 0.65, 0.15),
+        mk_dir(0.82, 0.50, 0.10),
     )
     nli = FakeNLI([pair_neutral, thesis_support])
     svc = ConcessionService(llm=FakeLLM(), nli=nli, config=_NLIConfig())
@@ -466,6 +484,48 @@ def test_multilingual_thesis_contradiction_english_user():
     out = svc.judge_last_two_messages(
         conv, Stance.PRO, topic='Las redes sociales han mejorado la conexión humana'
     )
+    assert out['alignment'] == 'OPPOSITE'
+    assert out['concession'] is True
+    assert out['reason'] == 'thesis_opposition'
+
+
+def test_sentence_splitting_and_max_contra():
+    """
+    Ensure that text is split into individual sentences and the strongest
+    contradiction is detected even if only one sentence is clearly opposing.
+    """
+    # First sentence: neutral
+    sent1 = mk_dir(0.20, 0.70, 0.10)
+    # Second sentence: strong contradiction
+    sent2 = mk_dir(0.10, 0.05, 0.85)
+
+    # Pack into bidirectional fake results for each sentence
+    # We'll have FakeNLI pop these in order of calls
+    thesis_neutral = mk_bidir(sent1, sent1)
+    thesis_contra = mk_bidir(sent2, sent2)
+
+    nli = FakeNLI([thesis_neutral, thesis_contra])
+    svc = ConcessionService(llm=FakeLLM(), nli=nli)
+
+    conv = [
+        {
+            'role': 'assistant',
+            'content': 'The assistant gives a long claim with evidence and examples to ensure word count.',
+        },
+        {
+            'role': 'user',
+            'content': (
+                'Primera oración es neutral y no contradice de manera explícita. '
+                'Sin embargo, no es cierto que el universo requiera un creador; '
+                'las leyes físicas pueden surgir naturalmente.'
+            ),
+        },
+    ]
+
+    out = svc.judge_last_two_messages(
+        conv, Stance.PRO, topic='The universe requires a creator'
+    )
+    # Because the second sentence is strongly contradictory, service should catch it
     assert out['alignment'] == 'OPPOSITE'
     assert out['concession'] is True
     assert out['reason'] == 'thesis_opposition'

@@ -3,9 +3,11 @@ from typing import Optional
 
 from app.domain.errors import ConversationExpired, ConversationNotFound
 from app.domain.parser import assert_no_topic_or_side_markers
+from app.domain.ports.debate_store import DebateStorePort
 from app.domain.ports.llm import LLMPort
 from app.domain.ports.message_repo import MessageRepoPort
 from app.services.concession_service import ConcessionService
+from app.utils.lang import parse_language_line
 
 
 class MessageService(object):
@@ -15,14 +17,17 @@ class MessageService(object):
         repo: MessageRepoPort,
         concession_service: Optional[ConcessionService] = None,
         llm: Optional[LLMPort] = None,
+        state_store: Optional[DebateStorePort] = None,
         history_limit=5,
     ):
         self.parser = parser
         self.repo = repo
+        self.state_store = state_store
         self.history_limit = history_limit
         self.llm = llm
         self.concession_service = concession_service or ConcessionService(
             llm=llm,
+            state_store=self.state_store,
         )
 
     async def handle(self, message: str, conversation_id: Optional[int] = None):
@@ -40,10 +45,20 @@ class MessageService(object):
             conversation_id=conversation.id, role='user', text=message
         )
 
-        reply = await self.llm.generate(conversation=conversation)
+        state = self.state_store.create(
+            conversation_id=conversation.id, stance=side.upper()
+        )
+
+        raw_reply = await self.llm.generate(conversation=conversation, state=state)
+
+        lang, clean_reply = parse_language_line(raw_reply)
+        state.lang = lang or 'en'
+        state.lang_locked = True
+        state.assistant_turns += 1
+        self.state_store.save(conversation_id=conversation.id, state=state)
 
         await self.repo.add_message(
-            conversation_id=conversation.id, role='bot', text=reply
+            conversation_id=conversation.id, role='bot', text=clean_reply
         )
 
         return {

@@ -53,3 +53,10 @@ def test_parser_reversed_order_and_punctuation():
     assert t == topic
     assert s == 'con'
     assert s == 'con'
+
+
+def test_parset_check_maximum_length_input():
+    topic = 'Topic: This is a simple example string that contains exactly one hundred one characters in total length now'
+    side = ' Side: pro'
+    with pytest.raises(InvalidStartMessage, match='must be less than 100 characters'):
+        parse_topic_side(topic + side)

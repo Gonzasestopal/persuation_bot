@@ -3,7 +3,9 @@ import time
 
 import pytest
 
-from app.factories import get_service
+from app.adapters.llm.constants import Provider
+from app.infra.llm import reset_llm_singleton_cache
+from app.infra.service import get_service
 from app.main import app
 from app.settings import settings
 
@@ -31,6 +33,9 @@ def test_real_llm_never_changes_stance(
     second_expected_stance,
 ):
     # ---- Turn 1: start conversation ----
+
+    reset_llm_singleton_cache()
+
     r1 = client.post(
         '/messages', json={'conversation_id': None, 'message': start_message}
     )
@@ -71,6 +76,27 @@ def test_returns_422_on_invalid_start(client):
     # Optional: detail text check (keep loose to avoid brittle tests)
     detail = r.json().get('detail', '')
     assert 'topic' in detail.lower() or 'side' in detail.lower()
+
+
+def test_returns_422_on_exceeding_topic_length(client):
+    """
+    Starting a conversation with a 'Topic' longer than allowed (e.g. >50 chars)
+    should raise a ValueError / validation error -> route returns 422.
+    """
+    too_long_topic = 'A' * 101  # 101 chars, exceeds limit
+
+    r = client.post(
+        '/messages',
+        json={
+            'conversation_id': None,
+            'message': f'Topic: {too_long_topic}\nSide: PRO',
+        },
+    )
+    assert r.status_code == 422, r.text
+
+    # Optional: check detail mentions "topic" or "length"
+    detail = r.json().get('detail', '')
+    assert 'topic' in detail.lower() or 'length' in detail.lower()
 
 
 def test_returns_404_on_unknown_conversation_id(client):
@@ -132,11 +158,7 @@ def test_returns_500_on_missing_api_key(client, monkeypatch):
         monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
         monkeypatch.setattr(settings, 'OPENAI_API_KEY', None, raising=False)
         monkeypatch.setattr(settings, 'ANTHROPIC_API_KEY', None, raising=False)
-
-        # If you use a fallback adapter, ensure it tries OpenAI first (or either),
-        # but both should be missing anyway:
-        monkeypatch.setattr(settings, 'PRIMARY_LLM', 'openai', raising=False)
-        monkeypatch.setattr(settings, 'SECONDARY_LLM', 'claude', raising=False)
+        monkeypatch.setattr(settings, 'LLM_PROVIDER', Provider.OPENAI, raising=False)
 
         r = client.post(
             '/messages',

@@ -5,6 +5,7 @@ from unittest.mock import Mock
 import pytest
 
 from app.adapters.llm.openai import OpenAIAdapter
+from app.domain.concession_policy import DebateState
 from app.domain.models import Conversation, Message
 
 
@@ -41,9 +42,9 @@ async def test_adapter_generate_builds_prompt_and_returns_output(monkeypatch):
     adapter = OpenAIAdapter(
         api_key='sk-test', client=client, model='gpt-4o', temperature=0.3
     )
-
+    state = DebateState(stance='con')
     conv = Conversation(id=1, topic='X', side='con', expires_at=expires_at)
-    out = await adapter.generate(conversation=conv)
+    out = await adapter.generate(conversation=conv, state=state)
 
     assert out == 'FAKE-OUTPUT'
     assert len(calls) == 1
@@ -53,7 +54,7 @@ async def test_adapter_generate_builds_prompt_and_returns_output(monkeypatch):
     assert sent['temperature'] == 0.3
 
     msgs = sent['input']
-    assert msgs[0] == {'role': 'system', 'content': adapter.system_prompt}
+    assert msgs[0] == {'role': 'system', 'content': adapter.con_system_prompt}
     assert msgs[1]['role'] == 'user'
     assert "You are debating the topic 'X'" in msgs[1]['content']
     assert 'Take the con side.' in msgs[1]['content']
@@ -73,8 +74,8 @@ async def test_adapter_debate_maps_roles_and_respects_history(monkeypatch):
         Message(role='user', message='u2'),
         Message(role='bot', message='b2'),
     ]
-
-    out = await adapter.debate(messages=msgs)
+    state = DebateState(stance='con')
+    out = await adapter.debate(messages=msgs, state=state)
     assert out == 'FAKE-OUTPUT'
 
     assert len(calls) == 1
@@ -83,7 +84,7 @@ async def test_adapter_debate_maps_roles_and_respects_history(monkeypatch):
     assert sent['temperature'] == 0.2
 
     input_msgs = sent['input']
-    assert input_msgs[0] == {'role': 'system', 'content': adapter.system_prompt}
+    assert input_msgs[0] == {'role': 'system', 'content': adapter.con_system_prompt}
 
     role_map = {'user': 'user', 'bot': 'assistant'}
     assert len(input_msgs) == len(msgs) + 1

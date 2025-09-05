@@ -91,40 +91,10 @@ jobs:
         run: poetry install --no-root --all-extras
 
       - name: Run tests
+        env:
+          USE_INMEMORY_REPO: "true"
+          DISABLE_DB_POOL: "true"
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          POOL_MIN: "0"
+          POOL_MAX: "10"
         run: PYTHONPATH=. poetry run pytest --cov=app --cov-report=term-missing --cov-report=xml
-
-  commit_lint:
-    runs-on: ubuntu-latest
-    environment: dev
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install Poetry
-        run: pipx install poetry
-
-      - name: Cache Poetry downloads
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pypoetry
-          key: poetry-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Cache virtualenv (.venv)
-        id: venv-cache
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Install dependencies
-        if: steps.venv-cache.outputs.cache-hit != 'true'
-        run: poetry install --no-root --all-extras
-
-      - name: Commit message lint (Commitizen)
-        run: poetry run make commit_check

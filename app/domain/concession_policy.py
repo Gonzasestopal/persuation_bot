@@ -13,10 +13,13 @@ class ConcessionPolicy:
 
 @dataclass
 class DebateState:
+    stance: str
     policy: ConcessionPolicy = field(default_factory=ConcessionPolicy)
     assistant_turns: int = 0
     positive_judgements: int = 0
     match_concluded: bool = False
+    lang: str = 'en'  # fixed language for this conversation
+    lang_locked: bool = False  # once True, never auto-change
 
     def should_end(self) -> bool:
         return (

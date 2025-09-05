@@ -21,10 +21,6 @@ class Settings(BaseSettings):
     DISABLE_DB_POOL: bool = Field(default=False, env='DISABLE_DB_POOL')
     ANTHROPIC_API_KEY: Optional[str] = None
 
-    # Fallback selection
-    PRIMARY_LLM: str = 'openai'  # "openai" | "claude"
-    SECONDARY_LLM: str = 'anthropic'
-
     # Behavior
     LLM_TEMPERATURE: float = 0.3
     MAX_OUTPUT_TOKENS: int = 120

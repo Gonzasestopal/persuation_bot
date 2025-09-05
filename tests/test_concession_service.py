@@ -1,12 +1,17 @@
 import pytest
 
+from app.adapters.repositories.memory_debate_store import InMemoryDebateStore
 from app.domain.nli.scoring import ScoringConfig
 from app.domain.ports.llm import (
     LLMPort,
 )  # only for typing; any object with .debate(...) works
 from app.services.concession_service import ConcessionService, NLIConfig, Stance
 
+
 # ---------------------------- Fakes / Helpers ------------------------------
+@pytest.fixture
+def store():
+    return InMemoryDebateStore()
 
 
 class FakeLLM(LLMPort):
@@ -242,7 +247,7 @@ def test_underdetermined_no_concession():
 
 @pytest.mark.asyncio
 async def test_analyze_conversation_increments_on_contradiction_and_concludes(
-    monkeypatch,
+    monkeypatch, store
 ):
     # Make state conclude after first concession
     nli = FakeNLI(
@@ -253,7 +258,11 @@ async def test_analyze_conversation_increments_on_contradiction_and_concludes(
         ]
     )
     svc = ConcessionService(
-        llm=FakeLLM(), nli=nli, nli_config=NLIConfig(), scoring=ScoringConfig()
+        llm=FakeLLM(),
+        nli=nli,
+        nli_config=NLIConfig(),
+        scoring=ScoringConfig(),
+        state_store=store,
     )
 
     # Inject dummy state that concludes after one positive judgement

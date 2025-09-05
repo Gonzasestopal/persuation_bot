@@ -16,9 +16,11 @@ os.environ.setdefault('USE_INMEMORY_REPO', '1')
 os.environ.setdefault('DISABLE_DB_POOL', '1')
 
 from app.adapters.llm.openai import OpenAIAdapter  # adjust import if different
+from app.adapters.nli.hf_nli import HFNLIProvider
 from app.adapters.repositories.memory import InMemoryMessageRepo
 from app.infra.service import get_service
 from app.main import app  # import after flags
+from app.services.concession_service import ConcessionService
 from app.services.message_service import MessageService
 from app.settings import settings
 
@@ -39,10 +41,22 @@ def client():
         temperature=0.3,
     )
 
+    nli = HFNLIProvider()
+
     state_store = InMemoryDebateStore()
 
+    concession_service = ConcessionService(
+        llm=llm,
+        nli=nli,
+        state_store=state_store,
+    )
+
     service = MessageService(
-        parser=parse_topic_side, repo=repo, llm=llm, state_store=state_store
+        parser=parse_topic_side,
+        repo=repo,
+        llm=llm,
+        state_store=state_store,
+        concession_service=concession_service,
     )
 
     # Override FastAPI DI so routes use our service (no DB access)

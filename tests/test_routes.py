@@ -154,11 +154,6 @@ def test_returns_500_on_missing_api_key(client, monkeypatch):
         monkeypatch.setattr(settings, 'OPENAI_API_KEY', None, raising=False)
         monkeypatch.setattr(settings, 'ANTHROPIC_API_KEY', None, raising=False)
 
-        # If you use a fallback adapter, ensure it tries OpenAI first (or either),
-        # but both should be missing anyway:
-        monkeypatch.setattr(settings, 'PRIMARY_LLM', 'openai', raising=False)
-        monkeypatch.setattr(settings, 'SECONDARY_LLM', 'claude', raising=False)
-
         r = client.post(
             '/messages',
             json={'conversation_id': None, 'message': 'Topic: X. Side: PRO.'},

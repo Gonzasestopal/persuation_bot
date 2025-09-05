@@ -6,7 +6,6 @@ import app.factories as fx
 from app.adapters.llm.anthropic import AnthropicAdapter
 from app.adapters.llm.constants import Difficulty, OpenAIModels, Provider
 from app.adapters.llm.dummy import DummyLLMAdapter
-from app.adapters.llm.fallback import FallbackLLM
 from app.adapters.llm.openai import OpenAIAdapter
 from app.domain.errors import ConfigError
 
@@ -120,27 +119,3 @@ def test_assert_is_anthropic(monkeypatch):
     stub_settings(monkeypatch, ANTHROPIC_API_KEY='sk-test')
     llm = fx.make_claude()
     assert isinstance(llm, AnthropicAdapter)
-
-
-def test_assert_is_fallback(monkeypatch):
-    stub_settings(monkeypatch, OPENAI_API_KEY='sk-test')
-    llm = fx.make_fallback_llm()
-    assert isinstance(llm, FallbackLLM)
-
-
-def test_openai_empty_api_key_raises_make_llm(monkeypatch):
-    stub_settings(monkeypatch, OPENAI_API_KEY='')
-
-    with pytest.raises(ConfigError) as e:
-        fx.make_fallback_llm()
-
-    assert 'OPENAI_API_KEY is required' in str(e.value)
-
-
-def test_anthropic_empty_api_key_raises_make_llm(monkeypatch):
-    stub_settings(monkeypatch, ANTHROPIC_API_KEY='')
-
-    with pytest.raises(ConfigError) as e:
-        fx.make_fallback_llm()
-
-    assert 'ANTHROPIC_API_KEY is required' in str(e.value)

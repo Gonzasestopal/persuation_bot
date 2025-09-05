@@ -11,7 +11,6 @@ from app.adapters.llm.constants import (
     Provider,
 )
 from app.adapters.llm.dummy import DummyLLMAdapter
-from app.adapters.llm.fallback import FallbackLLM
 from app.adapters.llm.openai import OpenAIAdapter
 from app.domain.concession_policy import DebateState
 from app.domain.errors import ConfigError
@@ -87,33 +86,10 @@ def make_claude():
     )
 
 
-def make_fallback_llm():
-    # Choose primary/secondary from settings
-    primary_name = (settings.PRIMARY_LLM or 'openai').lower()
-    secondary_name = (settings.SECONDARY_LLM or 'claude').lower()
-
-    provider_map = {
-        'openai': make_openai,
-        'claude': make_claude,
-        'anthropic': make_claude,  # alias
-    }
-
-    primary = provider_map[primary_name]()
-    secondary = provider_map[secondary_name]()
-
-    return FallbackLLM(
-        primary=primary,
-        secondary=secondary,
-        per_provider_timeout_s=settings.LLM_PER_PROVIDER_TIMEOUT_S,  # e.g., 12
-        mode='sequential',
-        logger=lambda msg: None,  # plug logger if you want
-    )
-
-
 @lru_cache(maxsize=1)
 def get_llm_singleton():
     # Build once per process
-    return make_fallback_llm()
+    return make_openai()
 
 
 @lru_cache(maxsize=1)

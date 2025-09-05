@@ -28,4 +28,3 @@ def parse_language_line(reply: str) -> tuple[str, str]:
 
     # fallback: no LANGUAGE line
     return 'en', reply.strip()
-    return 'en', reply.strip()

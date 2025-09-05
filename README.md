@@ -134,8 +134,6 @@ ANTHROPIC_API_KEY=your_anthropic_key
 # --- LLM Provider Settings ---
 LLM_PROVIDER=openai
 LLM_MODEL=gpt-4o
-PRIMARY_LLM=openai
-SECONDARY_LLM=anthropic
 
 # --- Difficulty / Conversation Settings ---
 DIFFICULTY=easy   # options: easy | medium

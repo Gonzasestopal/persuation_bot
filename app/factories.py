@@ -104,7 +104,7 @@ def get_concession_singleton(
     llm: LLMPort = Depends(get_llm_singleton),
 ) -> ConcessionService:
     # IMPORTANT: pass the shared store
-    return ConcessionService(llm=llm, state=store)
+    return ConcessionService(llm=llm, state_store=store)
 
 
 def get_service(

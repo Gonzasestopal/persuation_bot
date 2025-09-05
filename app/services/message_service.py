@@ -27,7 +27,7 @@ class MessageService(object):
         self.llm = llm
         self.concession_service = concession_service or ConcessionService(
             llm=llm,
-            state=self.state_store,
+            state_store=self.state_store,
         )
 
     async def handle(self, message: str, conversation_id: Optional[int] = None):

@@ -5,8 +5,9 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 from app.adapters.nli.hf_nli import HFNLIProvider
-from app.domain.concession_policy import DebateState
+from app.adapters.repositories.memory_debate_store import InMemoryDebateStore
 from app.domain.models import Message
+from app.domain.ports.debate_store import DebateStorePort
 from app.domain.ports.llm import LLMPort
 from app.verdicts import after_end_message, build_verdict
 
@@ -87,9 +88,9 @@ class ConcessionService:
         llm: LLMPort,
         config: _NLIConfig = _NLIConfig(),
         nli: Optional[HFNLIProvider] = None,
-        state: Optional[Dict[int, DebateState]] = None,
+        state_store: Optional[DebateStorePort] = None,
     ) -> None:
-        self._state = state or {}
+        self.state_store = state_store or InMemoryDebateStore()
         self.llm = llm
         self.nli = nli or HFNLIProvider(model_name=config.model_name)
         self.config = config
@@ -107,7 +108,13 @@ class ConcessionService:
     ):
         stance = Stance(side.upper())  # "PRO" o "CON"
 
-        state = self._get_state(conversation_id, stance)
+        state = self.state_store.get(conversation_id)
+        if state is None:
+            # Si garantizas que siempre existe, esto ayuda a detectar
+            # wiring incorrecto en tests o en producción.
+            raise RuntimeError(
+                f'DebateState missing for conversation_id={conversation_id}'
+            )
         logger.debug(
             '[analyze] conv_id=%s stance=%s topic=%s',
             conversation_id,
@@ -128,10 +135,12 @@ class ConcessionService:
         # Incrementar señales ANTES del LLM
         if self._is_positive_judgment(out):
             state.positive_judgements += 1
+            self.state_store.save(conversation_id=conversation_id, state=state)
             logger.debug('[analyze] +concession -> total=%d', state.positive_judgements)
 
         if state.maybe_conclude():
             state.match_concluded = True
+            self.state_store.save(conversation_id=conversation_id, state=state)
             return build_verdict(state=state)
 
         logger.debug('[analyze] calling llm.debate() with %d msgs', len(messages))
@@ -146,6 +155,11 @@ class ConcessionService:
             state.match_concluded = True
             return build_verdict(state=state)
 
+        self.state_store.save(conversation_id=conversation_id, state=state)
+
+        if state.match_concluded:
+            return build_verdict(state=state)
+
         return reply.strip()
 
     # -------------------------- Internal helpers ----------------------------
@@ -156,14 +170,6 @@ class ConcessionService:
             {'role': ('assistant' if m.role == 'bot' else 'user'), 'content': m.message}
             for m in messages
         ]
-
-    def _get_state(self, conversation_id: int, stance: Stance) -> DebateState:
-        # Ajusta si tu DebateState no tiene campo "stance"
-        if conversation_id not in self._state:
-            self._state[conversation_id] = DebateState(
-                stance=stance.value
-            )  # o sin stance si no existe
-        return self._state[conversation_id]
 
     @staticmethod
     def _drop_questions(text: str) -> str:

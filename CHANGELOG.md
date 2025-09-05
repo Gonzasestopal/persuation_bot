@@ -1,3 +1,30 @@
+## v1.3.0 (2025-09-05)
+
+### Feat
+
+- nli performance
+- add requirements
+- nli port and dependency inyection
+- **debate_store**: ports tests and adapter
+- **concession**: split hypotesis into full sentences
+- **concession**: shared debate state and locked language
+- **concession**: use bidirectional scores
+- **nli**: bidirectional scores
+- **parser**: verify topic maximum length
+
+### Fix
+
+- timeout
+- deps
+- make test pass
+
+### Refactor
+
+- **infra**: split factories into infra
+- **concession**: split service
+- **concession**: use state store
+- **debate store**: main service
+
 ## v1.2.3 (2025-09-05)
 
 ### Fix

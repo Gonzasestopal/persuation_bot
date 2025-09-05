@@ -16,7 +16,7 @@ huggingface_hub = "*"
 openai = "*"
 protobuf = "*"
 psycopg = { version = "3.2.*", extras = ["binary"] }
-psycopg_pool = "*"
+psycopg_pool = ">=3.2,<3.4"   # pin a known-good range
 pydantic-settings = "*"
 python-dotenv = "*"
 torch = "*"

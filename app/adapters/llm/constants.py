@@ -107,6 +107,4 @@ Concession & Ending:
 - Never write “Match concluded.” or similar phrasing.
 - Whether the debate is ongoing or ended is controlled ONLY by DEBATE_STATUS (provided by the server).
 - If DEBATE_STATUS=ONGOING: continue debating per rules above.
-- If DEBATE_STATUS=ENDED: output EXACTLY the following single line and nothing else:
-"The debate has already ended. Please start a new conversation if you want to debate another topic."
-"""
+- If DEBATE_STATUS=ENDED: output EXACTLY "<DEBATE_ENDED>" and nothing else."""

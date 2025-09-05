@@ -2,16 +2,10 @@ from typing import Iterable, List, Optional
 
 from openai import OpenAI
 
-from app.adapters.llm.constants import (  # template with {STANCE}, {DEBATE_STATUS}, {TURN_INDEX}; simple prompt (format-safe even if it has no placeholders)
-    AWARE_SYSTEM_PROMPT,
-    Difficulty,
-    OpenAIModels,
-)
-from app.domain.concession_policy import DebateState  # adjust path if different
+from app.adapters.llm.constants import AWARE_SYSTEM_PROMPT, Difficulty, OpenAIModels
+from app.domain.concession_policy import DebateState
 from app.domain.models import Conversation, Message
 from app.domain.ports.llm import LLMPort
-
-# ---------- Server-side enforcement helper (use in orchestration layer) ----------
 
 
 class OpenAIAdapter(LLMPort):
@@ -92,4 +86,5 @@ class OpenAIAdapter(LLMPort):
         system_prompt = self._render_system_prompt(state)
         mapped = self._map_history(messages)
         input_msgs = [{'role': 'system', 'content': system_prompt}, *mapped]
+        return self._request(input_msgs)
         return self._request(input_msgs)

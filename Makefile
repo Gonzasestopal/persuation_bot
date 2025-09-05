@@ -40,7 +40,7 @@ run:
 	@$(DOCKER_COMPOSE) up --build
 
 dev:
-	$(UVICORN) app.main:app --reload --port 8000
+	$(UVICORN) app.main:app --reload --port 8000 --log-config logging.ini
 
 test:
 	python -m pytest --cov=app --cov-report=term-missing

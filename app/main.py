@@ -23,6 +23,7 @@ async def lifespan(app: FastAPI):
             conninfo=settings.DATABASE_URL.encoded_string(),
             min_size=getattr(settings, 'POOL_MIN', 1),
             max_size=getattr(settings, 'POOL_MAX', 10),
+            timeout=5,  # wait at most 5s when borrowing from the pool
             open=True,
         )
 

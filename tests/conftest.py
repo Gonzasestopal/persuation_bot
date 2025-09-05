@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 
 from app.domain.parser import parse_topic_side
-from app.infra.state_store import InMemoryDebateStore
+from app.infra.debate_store import InMemoryDebateStore
 
 # Load env first (OPENAI_API_KEY, etc.)
 load_dotenv()
@@ -45,19 +45,19 @@ def client():
 
     nli = HFNLIProvider()
 
-    state_store = InMemoryDebateStore()
+    debate_store = InMemoryDebateStore()
 
     concession_service = ConcessionService(
         llm=llm,
         nli=nli,
-        state_store=state_store,
+        debate_store=debate_store,
     )
 
     service = MessageService(
         parser=parse_topic_side,
         repo=repo,
         llm=llm,
-        state_store=state_store,
+        debate_store=debate_store,
         concession_service=concession_service,
     )
 

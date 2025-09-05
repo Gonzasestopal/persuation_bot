@@ -1,3 +1,19 @@
+## v1.4.0 (2025-09-05)
+
+### Feat
+
+- add requirements
+
+### Fix
+
+- make test pass
+- deps
+- timeout
+
+### Refactor
+
+- use stance in domain
+
 ## v1.3.0 (2025-09-05)
 
 ### Feat

@@ -18,7 +18,7 @@ def test_get_returns_none_when_absent(store):
 
 def test_create_then_get_returns_copy(store):
     conv_id = 1
-    created = store.create(conv_id, stance='pro', lang='es')
+    created = store.create(conv_id, stance='pro', lang='es', topic='ok')
     assert isinstance(created, DebateState)
     assert created.stance == 'pro'
     assert created.lang == 'es'

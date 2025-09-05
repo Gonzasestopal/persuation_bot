@@ -91,4 +91,10 @@ jobs:
         run: poetry install --no-root --all-extras
 
       - name: Run tests
+        env:
+          USE_INMEMORY_REPO: "false"
+          DISABLE_DB_POOL: "false"
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          POOL_MIN: "0"
+          POOL_MAX: "10"
         run: PYTHONPATH=. poetry run pytest --cov=app --cov-report=term-missing --cov-report=xml

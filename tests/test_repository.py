@@ -14,19 +14,19 @@ def repo():
 @pytest.mark.asyncio
 async def test_create_and_get_conversation(repo):
     repo = InMemoryMessageRepo()
-    conv = await repo.create_conversation(topic='T', side='pro')
+    conv = await repo.create_conversation(topic='T', stance='pro')
     assert isinstance(conv, Conversation)
 
     retrieved_conv = await repo.get_conversation(conv.id)
     assert retrieved_conv and retrieved_conv.id == conv.id
     assert retrieved_conv.topic == 'T'
-    assert retrieved_conv.side == 'pro'
+    assert retrieved_conv.stance == 'pro'
     assert isinstance(retrieved_conv.expires_at, dt.datetime)
 
 
 @pytest.mark.asyncio
 async def test_touch_conversation_bumps_expiry(repo):
-    conv = await repo.create_conversation(topic='X', side='con')
+    conv = await repo.create_conversation(topic='X', stance='con')
     before = (await repo.get_conversation(conv.id)).expires_at
     await repo.touch_conversation(conv.id)
     after = (await repo.get_conversation(conv.id)).expires_at
@@ -35,8 +35,8 @@ async def test_touch_conversation_bumps_expiry(repo):
 
 @pytest.mark.asyncio
 async def test_last_messages_are_per_conversation(repo):
-    a = await repo.create_conversation(topic='A', side='pro')
-    b = await repo.create_conversation(topic='B', side='con')
+    a = await repo.create_conversation(topic='A', stance='pro')
+    b = await repo.create_conversation(topic='B', stance='con')
     await repo.add_message(a.id, role='user', text='a1')
     await repo.add_message(b.id, role='user', text='b1')
 
@@ -48,7 +48,7 @@ async def test_last_messages_are_per_conversation(repo):
 
 @pytest.mark.asyncio
 async def test_add_and_list_last_messages_order_and_limit(repo):
-    conv = await repo.create_conversation(topic='T', side='pro')
+    conv = await repo.create_conversation(topic='T', stance='pro')
     # add 6 messages
     for i in range(6):
         await repo.add_message(
@@ -66,7 +66,7 @@ async def test_add_and_list_last_messages_order_and_limit(repo):
 
 @pytest.mark.asyncio
 async def test_last_messages_window_slides_on_new_message(repo):
-    conv = await repo.create_conversation(topic='T', side='pro')
+    conv = await repo.create_conversation(topic='T', stance='pro')
 
     for i in range(5):
         await repo.add_message(conv.id, role='user', text=f'm{i}')
@@ -84,7 +84,7 @@ async def test_last_messages_window_slides_on_new_message(repo):
 
 @pytest.mark.asyncio
 async def test_user_bot_order_preserved_with_same_timestamp(repo):
-    conv = await repo.create_conversation(topic='T', side='pro')
+    conv = await repo.create_conversation(topic='T', stance='pro')
     ts = dt.datetime(2025, 1, 1, tzinfo=dt.timezone.utc)
 
     # Same timestamp, but inserted user then bot repeatedly
@@ -108,8 +108,8 @@ async def test_user_bot_order_preserved_with_same_timestamp(repo):
 
 @pytest.mark.asyncio
 async def test_all_messages(repo):
-    conv = await repo.create_conversation(topic='T', side='pro')
-    another_conv = await repo.create_conversation(topic='C', side='pro')
+    conv = await repo.create_conversation(topic='T', stance='pro')
+    another_conv = await repo.create_conversation(topic='C', stance='pro')
 
     for i in range(10):
         await repo.add_message(conv.id, role='user', text=f'm{i}')

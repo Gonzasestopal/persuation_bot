@@ -273,7 +273,7 @@ async def test_analyze_conversation_increments_on_contradiction_and_concludes(
     # The service expects Message objects with .role and .message;
     # our make_msgs returns a simple class that matches that.
     result = await svc.analyze_conversation(
-        messages=msgs, side=Stance.PRO, conversation_id=conv_id, topic='Tema X'
+        messages=msgs, stance=Stance.PRO, conversation_id=conv_id, topic='Tema X'
     )
 
     # Since maybe_conclude() returns True after first concession, analyze_conversation returns verdict string

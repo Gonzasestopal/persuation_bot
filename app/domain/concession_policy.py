@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 
+from app.domain.enums import Stance
 from app.settings import settings
 
 
@@ -13,7 +14,7 @@ class ConcessionPolicy:
 
 @dataclass
 class DebateState:
-    stance: str
+    stance: Stance
     policy: ConcessionPolicy = field(default_factory=ConcessionPolicy)
     assistant_turns: int = 0
     positive_judgements: int = 0

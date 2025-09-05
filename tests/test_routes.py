@@ -75,7 +75,7 @@ def test_returns_422_on_invalid_start(client):
 
     # Optional: detail text check (keep loose to avoid brittle tests)
     detail = r.json().get('detail', '')
-    assert 'topic' in detail.lower() or 'side' in detail.lower()
+    assert 'topic' in detail.lower() or 'stance' in detail.lower()
 
 
 def test_returns_422_on_exceeding_topic_length(client):
@@ -159,6 +159,8 @@ def test_returns_500_on_missing_api_key(client, monkeypatch):
         monkeypatch.setattr(settings, 'OPENAI_API_KEY', None, raising=False)
         monkeypatch.setattr(settings, 'ANTHROPIC_API_KEY', None, raising=False)
         monkeypatch.setattr(settings, 'LLM_PROVIDER', Provider.OPENAI, raising=False)
+
+        reset_llm_singleton_cache()
 
         r = client.post(
             '/messages',

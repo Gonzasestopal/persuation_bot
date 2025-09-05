@@ -3,6 +3,7 @@ from copy import deepcopy
 from typing import Callable, Optional
 
 from app.domain.concession_policy import DebateState  # adjust import to your tree
+from app.domain.enums import Stance
 from app.domain.ports.debate_store import DebateStorePort
 
 
@@ -20,7 +21,7 @@ class InMemoryDebateStore(DebateStorePort):
         return deepcopy(s) if s else None
 
     def create(
-        self, conversation_id: int, *, stance: str, lang: str = 'es'
+        self, conversation_id: int, *, stance: Stance, lang: str = 'es'
     ) -> DebateState:
         if conversation_id in self._db:
             raise ValueError(f'DebateState {conversation_id} already exists')

@@ -31,6 +31,8 @@ def client():
     Use a single in-memory repo for the whole test session and the REAL LLM.
     Dependency override guarantees the route won't touch app.state.dbpool.
     """
+    prev = settings.DISABLE_DB_POOL
+    settings.DISABLE_DB_POOL = True
     # Shared, persistent in-memory repo across requests
     repo = InMemoryMessageRepo()
 
@@ -59,12 +61,13 @@ def client():
         concession_service=concession_service,
     )
 
-    # Override FastAPI DI so routes use our service (no DB access)
     app.dependency_overrides[get_service] = lambda: service
 
-    # Ensure lifespan runs (even though we don't need dbpool)
-    with TestClient(app) as c:
-        yield c
+    try:
+        with TestClient(app) as c:
+            yield c
+    finally:
+        settings.DISABLE_DB_POOL = prev
+        app.dependency_overrides.clear()
 
-    # Cleanup override (optional)
-    app.dependency_overrides.clear()  # Cleanup override (optional)
+    app.dependency_overrides.clear()

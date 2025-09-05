@@ -8,6 +8,7 @@ from app.adapters.llm.constants import (
     AnthropicModels,
     Difficulty,
 )
+from app.domain.enums import Stance
 from app.domain.models import Conversation, Message
 from app.domain.ports.llm import LLMPort
 
@@ -36,8 +37,8 @@ class AnthropicAdapter(LLMPort):
             else SYSTEM_PROMPT
         )
 
-    def _build_user_msg(self, topic: str, side: str) -> str:
-        return f"You are debating the topic '{topic}'. Take the {side} side."
+    def _build_user_msg(self, topic: str, stance: Stance) -> str:
+        return f"You are debating the topic '{topic}'. Take the {stance} stance."
 
     @staticmethod
     def _map_history(messages: List[Message]) -> List[dict]:
@@ -66,7 +67,7 @@ class AnthropicAdapter(LLMPort):
         )
 
     async def generate(self, conversation: Conversation) -> str:
-        user = self._build_user_msg(conversation.topic, conversation.side)
+        user = self._build_user_msg(conversation.topic, conversation.stance)
         msgs = [{'role': 'user', 'content': [{'type': 'text', 'text': user}]}]
         return await self._request(messages=msgs, system=self.system_prompt)
 

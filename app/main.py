@@ -8,6 +8,11 @@ from app.api.routes import router
 from app.settings import settings
 
 
+def _pool_is_closed(pool) -> bool:
+    # psycopg_pool versions expose either `.closed` or `.is_closed`
+    return bool(getattr(pool, 'closed', False) or getattr(pool, 'is_closed', False))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.dbpool = None
@@ -23,7 +28,7 @@ async def lifespan(app: FastAPI):
             conninfo=settings.DATABASE_URL.encoded_string(),
             min_size=getattr(settings, 'POOL_MIN', 1),
             max_size=getattr(settings, 'POOL_MAX', 10),
-            timeout=5,  # wait at most 5s when borrowing from the pool
+            timeout=10,  # wait at most 5s when borrowing from the pool
             open=True,
         )
 
@@ -31,11 +36,12 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         pool = getattr(app.state, 'dbpool', None)
-        if pool is not None:
-            # close() is sync in all versions
-            pool.close()
+        # Prevent future teardown attempts from touching this instance
+        app.state.dbpool = None
 
-            # Compatibility across psycopg_pool versions
+        if pool and not _pool_is_closed(pool):
+            # close() is sync; await whichever waiter exists in your version
+            pool.close()
             waiter = (
                 getattr(pool, 'wait_close', None)
                 or getattr(pool, 'wait_closed', None)
@@ -54,4 +60,6 @@ register_exception_handlers(app)
 
 @app.get('/', tags=['health'])
 async def healthcheck():
+    return {'Welcome to debate BOT': 'Visit /messages to start conversation'}
+    return {'Welcome to debate BOT': 'Visit /messages to start conversation'}
     return {'Welcome to debate BOT': 'Visit /messages to start conversation'}

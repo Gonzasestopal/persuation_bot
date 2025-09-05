@@ -9,6 +9,7 @@ from app.domain.nli.config import NLIConfig
 from app.domain.nli.scoring import ScoringConfig
 from app.domain.ports.debate_store import DebateStorePort
 from app.domain.ports.llm import LLMPort
+from app.domain.verdicts import after_end_message, build_verdict
 from app.nli.ops import (
     agg_max,
     has_support_either_direction,
@@ -22,7 +23,6 @@ from app.utils.text import (
     trunc,
     word_count,
 )
-from app.verdicts import after_end_message, build_verdict
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

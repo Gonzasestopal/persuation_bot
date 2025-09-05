@@ -22,4 +22,3 @@ class ScoringConfig:
 
     # Misc
     min_user_words: int = 8
-    min_user_words: int = 8

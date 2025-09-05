@@ -61,3 +61,4 @@ name = "cz_conventional_commits"
 version = "1.2.2"
 tag_format = "v$version"
 update_changelog_on_bump = true
+commit_message_pattern = "(?s)(build|ci|docs|feat|fix|perf|refactor|style|tests?|chore|revert|bump)(\\(\\S+\\))?!?:( [^\\n\\r]+)((\\n\\n.*)|(\\s*))?$"

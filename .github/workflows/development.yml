@@ -92,8 +92,8 @@ jobs:
 
       - name: Run tests
         env:
-          USE_INMEMORY_REPO: "false"
-          DISABLE_DB_POOL: "false"
+          USE_INMEMORY_REPO: "true"
+          DISABLE_DB_POOL: "true"
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           POOL_MIN: "0"
           POOL_MAX: "10"

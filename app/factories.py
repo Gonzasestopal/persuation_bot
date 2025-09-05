@@ -12,6 +12,7 @@ from app.adapters.llm.constants import (
 )
 from app.adapters.llm.dummy import DummyLLMAdapter
 from app.adapters.llm.openai import OpenAIAdapter
+from app.adapters.repositories.memory_debate_store import InMemoryDebateStore
 from app.domain.concession_policy import DebateState
 from app.domain.errors import ConfigError
 from app.domain.parser import parse_topic_side
@@ -95,7 +96,7 @@ def get_llm_singleton():
 @lru_cache(maxsize=1)
 def get_state_store() -> dict[int, DebateState]:
     # single, per-process store
-    return {}
+    return InMemoryDebateStore()
 
 
 def get_concession_singleton(

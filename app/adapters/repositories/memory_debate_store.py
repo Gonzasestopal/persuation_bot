@@ -47,4 +47,3 @@ class InMemoryDebateStore(DebateStorePort):
 
     def clear(self) -> None:
         self._db.clear()
-        self._db.clear()

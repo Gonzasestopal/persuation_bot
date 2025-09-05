@@ -1,6 +1,7 @@
 import datetime as dt
 from typing import Dict, List, Optional
 
+from app.domain.enums import Stance
 from app.domain.models import Conversation, Message
 from app.domain.ports.message_repo import MessageRepoPort
 
@@ -13,7 +14,7 @@ class InMemoryMessageRepo(MessageRepoPort):
         self.conversations: dict[int, dict] = {}
         self.messages: List[Dict] = []
 
-    async def create_conversation(self, *, topic: str, side: str) -> Conversation:
+    async def create_conversation(self, *, topic: str, stance: Stance) -> Conversation:
         expires_at = dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=60)
         self._cid += 1
         cid = self._cid
@@ -21,14 +22,14 @@ class InMemoryMessageRepo(MessageRepoPort):
         self.conversations[cid] = {
             'conversation_id': cid,
             'topic': topic,
-            'side': side,
+            'stance': stance,
             'expires_at': expires_at,
         }
         return Conversation(
             id=cid,
             expires_at=expires_at,
             topic=topic,
-            side=side,
+            stance=stance,
         )
 
     async def get_conversation(self, conversation_id: int) -> Optional[Conversation]:

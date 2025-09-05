@@ -13,36 +13,26 @@ async def lifespan(app: FastAPI):
     app.state.dbpool = None
     app.state.inmem_repo = None
 
-    if getattr(settings, 'USE_INMEMORY_REPO', False):
+    if settings.USE_INMEMORY_REPO:
         from app.adapters.repositories.memory import InMemoryMessageRepo
 
         app.state.inmem_repo = InMemoryMessageRepo()
 
-    if not getattr(settings, 'DISABLE_DB_POOL', False):
+    if not settings.DISABLE_DB_POOL:
         app.state.dbpool = AsyncConnectionPool(
             conninfo=settings.DATABASE_URL.encoded_string(),
-            min_size=getattr(settings, 'POOL_MIN', 1),
-            max_size=getattr(settings, 'POOL_MAX', 10),
-            timeout=5,  # wait at most 5s when borrowing from the pool
+            min_size=settings.POOL_MIN,
+            max_size=settings.POOL_MAX,
+            timeout=5,
             open=True,
         )
-
     try:
         yield
     finally:
         pool = getattr(app.state, 'dbpool', None)
         if pool is not None:
-            # close() is sync in all versions
-            pool.close()
-
-            # Compatibility across psycopg_pool versions
-            waiter = (
-                getattr(pool, 'wait_close', None)
-                or getattr(pool, 'wait_closed', None)
-                or getattr(pool, 'wait', None)
-            )
-            if callable(waiter):
-                await waiter()
+            await pool.close()
+            await pool.wait_closed()
 
 
 app = FastAPI(lifespan=lifespan)

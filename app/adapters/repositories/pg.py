@@ -3,6 +3,7 @@ from typing import List, Optional
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
+from app.domain.enums import Stance
 from app.domain.models import Conversation, Message
 from app.domain.ports.message_repo import MessageRepoPort
 
@@ -11,12 +12,23 @@ class PgMessageRepo(MessageRepoPort):
     def __init__(self, pool: AsyncConnectionPool):
         self.pool = pool
 
-    async def create_conversation(self, *, topic: str, side: str) -> Conversation:
+    @staticmethod
+    def _to_domain_conversation(row: dict) -> Conversation:
+        return Conversation(
+            id=row['id'],
+            topic=row['topic'],
+            stance=Stance(row['side']),  # DB string -> domain enum
+            expires_at=row['expires_at'],
+        )
+
+    async def create_conversation(self, *, topic: str, stance: Stance) -> Conversation:
         q = 'INSERT INTO conversations (topic, side) VALUES (%s, %s) RETURNING conversation_id, expires_at'
         async with self.pool.connection() as conn, conn.cursor() as cur:
-            await cur.execute(q, (topic, side))
+            await cur.execute(q, (topic, stance))
             (cid, expires_at) = await cur.fetchone()
-            return Conversation(id=cid, topic=topic, side=side, expires_at=expires_at)
+            return Conversation(
+                id=cid, topic=topic, stance=stance, expires_at=expires_at
+            )
 
     async def get_conversation(self, conversation_id: int) -> Optional[Conversation]:
         q = 'SELECT conversation_id AS id, topic, side, expires_at FROM conversations WHERE conversation_id = %s'
@@ -26,7 +38,7 @@ class PgMessageRepo(MessageRepoPort):
         ):
             await cur.execute(q, (conversation_id,))
             row = await cur.fetchone()
-            return Conversation(**row) if row else None
+            return self._to_domain_conversation(row) if row else None
 
     async def touch_conversation(self, conversation_id: int) -> None:
         q = """UPDATE conversations

@@ -1,6 +1,7 @@
 from typing import Callable, Optional, Protocol
 
 from app.domain.concession_policy import DebateState
+from app.domain.enums import Stance
 
 
 class DebateStorePort(Protocol):
@@ -10,7 +11,7 @@ class DebateStorePort(Protocol):
     async def get_or_create(
         self,
         conversation_id: int,
-        stance: str,
+        stance: Stance,
         lang: str,
     ) -> DebateState:
         pass

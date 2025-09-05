@@ -1,9 +1,8 @@
 import re
 from typing import Tuple
 
+from app.domain.enums import Stance
 from app.domain.errors import InvalidContinuationMessage, InvalidStartMessage
-
-_ALLOWED = {'pro', 'con'}
 
 TOPIC_MAX_LENGTH = 100
 
@@ -13,7 +12,12 @@ _SIDE_RE = re.compile(r'(?i)\bside\s*:\s*(?P<side>\w+)')
 _MARKERS_RE = re.compile(r'(?i)\b(topic|side)\s*:')
 
 
-def parse_topic_side(text: str) -> Tuple[str, str]:
+def _to_stance(s: str) -> Stance:
+    s_norm = s.strip().lower()
+    return Stance(s_norm)  # raises ValueError if invalid
+
+
+def parse_topic_side(text: str) -> Tuple[str, Stance]:
     if not text or not text.strip():
         raise InvalidStartMessage('message must not be empty')
 
@@ -28,17 +32,20 @@ def parse_topic_side(text: str) -> Tuple[str, str]:
         raise InvalidStartMessage('side is missing')
 
     topic = m_topic.group('topic').strip(' .,\n\t')
-    side = m_side.group('side').strip().lower()
+    stance = m_side.group('side').strip().lower()
 
-    if side not in _ALLOWED:
+    try:
+        stance = _to_stance(stance)
+    except ValueError:
         raise InvalidStartMessage("side must be 'pro' or 'con'")
+
     if not topic:
         raise InvalidStartMessage('topic must not be empty')
 
     if len(topic) >= TOPIC_MAX_LENGTH:
         raise InvalidStartMessage('topic must be less than 100 characters')
 
-    return topic, side
+    return topic, stance
 
 
 def assert_no_topic_or_side_markers(text: str) -> None:

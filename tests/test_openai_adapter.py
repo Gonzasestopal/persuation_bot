@@ -43,7 +43,7 @@ async def test_adapter_generate_builds_prompt_and_returns_output(monkeypatch):
         api_key='sk-test', client=client, model='gpt-4o', temperature=0.3
     )
     state = DebateState(stance='con')
-    conv = Conversation(id=1, topic='X', side='con', expires_at=expires_at)
+    conv = Conversation(id=1, topic='X', stance='con', expires_at=expires_at)
     out = await adapter.generate(conversation=conv, state=state)
 
     assert out == 'FAKE-OUTPUT'
@@ -57,7 +57,7 @@ async def test_adapter_generate_builds_prompt_and_returns_output(monkeypatch):
     assert msgs[0] == {'role': 'system', 'content': adapter.con_system_prompt}
     assert msgs[1]['role'] == 'user'
     assert "You are debating the topic 'X'" in msgs[1]['content']
-    assert 'Take the con side.' in msgs[1]['content']
+    assert 'Take the con stance.' in msgs[1]['content']
 
 
 @pytest.mark.asyncio

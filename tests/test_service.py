@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, Mock, call, create_autospec
 import pytest
 
 from app.domain.concession_policy import DebateState
+from app.domain.enums import Stance
 from app.domain.errors import (
     ConversationExpired,
     ConversationNotFound,
@@ -25,7 +26,7 @@ def state_store():
     """
     _mem = {}
 
-    def _create(*, conversation_id: int, stance: str, lang: str = 'en', **_):
+    def _create(*, conversation_id: int, stance: Stance, lang: str = 'en', **_):
         # Minimal state object with fields your start flow mutates
         s = SimpleNamespace(
             stance=stance,
@@ -52,7 +53,9 @@ def state_store():
 @pytest.fixture
 def repo():
     expired_time = datetime.now(timezone.utc) + timedelta(minutes=60)
-    conversation = Conversation(id=123, topic='X', side='con', expires_at=expired_time)
+    conversation = Conversation(
+        id=123, topic='X', stance='con', expires_at=expired_time
+    )
     return SimpleNamespace(
         create_conversation=AsyncMock(return_value=42),  # not used here
         get_conversation=AsyncMock(return_value=conversation),
@@ -92,7 +95,7 @@ async def test_new_conversation(repo, llm):
     out = await svc.handle(message=txt)
 
     parser.assert_called_once_with(txt)
-    # Your method signature is positional: (topic, side)
+    # Your method signature is positional: (topic, stance)
     svc.start_conversation.assert_awaited_once_with('X', 'con', txt)
     svc.continue_conversation.assert_not_called()
     assert out == {'ok': 'start'}
@@ -180,7 +183,7 @@ async def test_continue_with_empty_message(repo, llm):
 @pytest.mark.asyncio
 async def test_start_writes_messages_and_returns_window(llm, state_store):
     expires_at = datetime.utcnow()
-    conv = Conversation(id=42, topic='X', side='con', expires_at=expires_at)
+    conv = Conversation(id=42, topic='X', stance='con', expires_at=expires_at)
     user_message = Message(role='user', message='Topic: X, Side: con')
     bot_message = Message(role='bot', message='bot reply')
     repo = SimpleNamespace(
@@ -206,10 +209,10 @@ async def test_start_writes_messages_and_returns_window(llm, state_store):
     svc = MessageService(parser=parser, repo=repo, llm=llm, state_store=state_store)
 
     out = await svc.start_conversation(
-        topic='X', side='con', message='Topic: X, Side: con'
+        topic='X', stance='con', message='Topic: X, Side: con'
     )
 
-    repo.create_conversation.assert_awaited_once_with(topic='X', side='con')
+    repo.create_conversation.assert_awaited_once_with(topic='X', stance='con')
     repo.add_message.assert_has_awaits(
         [
             call(conversation_id=42, role='user', text='Topic: X, Side: con'),
@@ -308,7 +311,9 @@ async def test_continue_conversation_respects_history_limit(llm):
     user_message = Message(role='user', message='hi')
     bot_message = Message(role='bot', message='bot reply')
     expired_time = datetime.now(timezone.utc) + timedelta(minutes=60)
-    conversation = Conversation(id=123, topic='X', side='con', expires_at=expired_time)
+    conversation = Conversation(
+        id=123, topic='X', stance='con', expires_at=expired_time
+    )
     repo = SimpleNamespace(
         create_conversation=AsyncMock(),
         get_conversation=AsyncMock(return_value=conversation),
@@ -374,7 +379,9 @@ async def test_continue_conversation_respects_history_limit(llm):
 @pytest.mark.asyncio
 async def test_continue_conversation_expired(repo, llm):
     expired_time = datetime.now(timezone.utc) - timedelta(minutes=1)
-    conversation = Conversation(id=123, topic='X', side='con', expires_at=expired_time)
+    conversation = Conversation(
+        id=123, topic='X', stance='con', expires_at=expired_time
+    )
     repo.get_conversation.return_value = conversation
 
     svc = MessageService(parser=Mock(), repo=repo, llm=llm)
@@ -389,7 +396,7 @@ async def test_continue_conversation_expired(repo, llm):
 @pytest.mark.asyncio
 async def test_start_conversation_calls_llm_and_stores_reply():
     expires_at = datetime.utcnow()
-    conv = Conversation(id=42, topic='X', side='con', expires_at=expires_at)
+    conv = Conversation(id=42, topic='X', stance='con', expires_at=expires_at)
     state = create_autospec(DebateState, instance=True)
     state.stance = 'con'
     state.match_concluded = False
@@ -450,12 +457,14 @@ async def test_continue_conversation_retrieves_all_messages(llm):
     )
     stance_message = Message(
         role='user',
-        message="I will gladly take the PRO side that dogs are indeed human's best friend. Dogs offer unwavering loyalty and companionship, often providing emotional support and enhancing human well-being.",
+        message="I will gladly take the PRO stance that dogs are indeed human's best friend. Dogs offer unwavering loyalty and companionship, often providing emotional support and enhancing human well-being.",
     )
     user_message = Message(role='user', message='I firmly believe...')
     bot_message = Message(role='bot', message='OK')
     expired_time = datetime.now(timezone.utc) + timedelta(minutes=60)
-    conversation = Conversation(id=123, topic='X', side='con', expires_at=expired_time)
+    conversation = Conversation(
+        id=123, topic='X', stance='con', expires_at=expired_time
+    )
     repo = SimpleNamespace(
         create_conversation=AsyncMock(return_value=conversation),
         get_conversation=AsyncMock(return_value=conversation),
@@ -534,7 +543,7 @@ async def test_continue_conversation_calls_concession_service(repo, llm):
     await svc.continue_conversation(message='I firmly believe...', conversation_id=123)
     concession_service.analyze_conversation.assert_awaited_once_with(
         messages=messages,
-        side=conversation.side,
+        stance=conversation.stance,
         conversation_id=conversation_id,
         topic=conversation.topic,
     )

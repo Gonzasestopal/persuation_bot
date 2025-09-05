@@ -57,7 +57,7 @@ async def test_adapter_generate_builds_prompt_and_returns_output():
     conv = Conversation(
         id=1,
         topic='X',
-        side='con',
+        stance='con',
         expires_at=datetime.now(timezone.utc),
     )
 
@@ -84,7 +84,7 @@ async def test_adapter_generate_builds_prompt_and_returns_output():
 
     text = content[0]['text']
     assert "You are debating the topic 'X'" in text
-    assert 'Take the con side.' in text
+    assert 'Take the con stance.' in text
 
 
 @pytest.mark.asyncio

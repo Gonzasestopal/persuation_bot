@@ -122,7 +122,7 @@ def test_bidirectional_api(nli_provider):
 
 
 PREMISE = (
-    'I will gladly take the CON side, arguing that the concept of God existing in all '
+    'I will gladly take the CON stance, arguing that the concept of God existing in all '
     'of us is not universally applicable. This idea lacks empirical evidence and varies '
     'greatly across different cultures and belief systems. How do you address the '
     'diversity of beliefs that contradict this notion?'
@@ -157,7 +157,7 @@ def test_premise_contradiction_about_god_universality(
 
 
 PREMISE = (
-    'I will gladly take the PRO side, arguing that God exists in all of us. '
+    'I will gladly take the PRO stance, arguing that God exists in all of us. '
     'This perspective suggests a universal divinity that connects humanity, '
     'fostering empathy and moral consciousness. It aligns with various spiritual '
     'and philosophical traditions that emphasize inner divinity and interconnectedness.'
@@ -352,7 +352,7 @@ def test_premisa_negativa_argumentos_entailment(nli_provider, premise, hypothesi
 
 
 PREMISE = (
-    'I will gladly take the CON side, arguing that the concept of God existing in all '
+    'I will gladly take the CON stance, arguing that the concept of God existing in all '
     'of us is not universally applicable. This idea lacks empirical evidence and varies '
     'greatly across different cultures and belief systems. How do you address the '
     'diversity of beliefs that contradict this notion?'
@@ -387,7 +387,7 @@ def test_premise_contradiction_about_god_universality_softened(
 
 
 PREMISE = (
-    'I will gladly take the PRO side, arguing that God exists in all of us. '
+    'I will gladly take the PRO stance, arguing that God exists in all of us. '
     'This perspective suggests a universal divinity that connects humanity, '
     'fostering empathy and moral consciousness. It aligns with various spiritual '
     'and philosophical traditions that emphasize inner divinity and interconnectedness.'

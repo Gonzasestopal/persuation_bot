@@ -1,7 +1,7 @@
 import logging
-from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from app.domain.enums import Stance
 from app.domain.models import Message
 from app.domain.nli.config import NLIConfig
 from app.domain.nli.scoring import ScoringConfig
@@ -27,11 +27,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class Stance(str, Enum):
-    PRO = 'PRO'
-    CON = 'CON'
-
-
 class ConcessionService:
     def __init__(
         self,
@@ -48,9 +43,8 @@ class ConcessionService:
         self.state_store = state_store
 
     async def analyze_conversation(
-        self, messages: List[Message], side: Stance, conversation_id: int, topic: str
+        self, messages: List[Message], stance: Stance, conversation_id: int, topic: str
     ):
-        stance = Stance(side.upper())
         state = self.state_store.get(conversation_id)
         if state is None:
             raise RuntimeError(

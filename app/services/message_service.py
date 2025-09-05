@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
+from app.domain.enums import Stance
 from app.domain.errors import ConversationExpired, ConversationNotFound
 from app.domain.parser import assert_no_topic_or_side_markers
 from app.domain.ports.debate_store import DebateStorePort
@@ -32,21 +33,22 @@ class MessageService(object):
 
     async def handle(self, message: str, conversation_id: Optional[int] = None):
         if conversation_id is None:
-            topic, side = self.parser(message)
-            return await self.start_conversation(topic, side, message)
+            topic, stance = self.parser(message)
+            return await self.start_conversation(topic, stance, message)
 
         assert_no_topic_or_side_markers(message)
         return await self.continue_conversation(message, conversation_id)
 
-    async def start_conversation(self, topic: str, side: str, message: str = None):
-        conversation = await self.repo.create_conversation(topic=topic, side=side)
+    async def start_conversation(self, topic: str, stance: Stance, message: str = None):
+        conversation = await self.repo.create_conversation(topic=topic, stance=stance)
 
         await self.repo.add_message(
             conversation_id=conversation.id, role='user', text=message
         )
 
         state = self.state_store.create(
-            conversation_id=conversation.id, stance=side.upper()
+            conversation_id=conversation.id,
+            stance=stance,
         )
 
         raw_reply = await self.llm.generate(conversation=conversation, state=state)
@@ -85,7 +87,7 @@ class MessageService(object):
 
         reply = await self.concession_service.analyze_conversation(
             messages=full_history,
-            side=conversation.side,
+            stance=conversation.stance,
             conversation_id=conversation_id,
             topic=conversation.topic,
         )

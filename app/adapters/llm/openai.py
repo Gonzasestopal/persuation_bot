@@ -4,6 +4,7 @@ from openai import OpenAI
 
 from app.adapters.llm.constants import AWARE_SYSTEM_PROMPT, Difficulty, OpenAIModels
 from app.domain.concession_policy import DebateState
+from app.domain.enums import Stance
 from app.domain.models import Conversation, Message
 from app.domain.ports.llm import LLMPort
 
@@ -49,14 +50,14 @@ class OpenAIAdapter(LLMPort):
 
         debate_status = 'ENDED' if state.match_concluded else 'ONGOING'
         return AWARE_SYSTEM_PROMPT.format(
-            STANCE=state.stance,
+            STANCE=state.stance.upper(),
             DEBATE_STATUS=debate_status,
             TURN_INDEX=state.assistant_turns,
             LANGUAGE=state.lang,
         )
 
-    def _build_user_msg(self, topic: str, side: str) -> str:
-        return f"You are debating the topic '{topic}'.\nTake the {side} side.\n\n"
+    def _build_user_msg(self, topic: str, stance: Stance) -> str:
+        return f"You are debating the topic '{topic}'.\nTake the {stance} stance.\n\n"
 
     # ---------- low-level request ----------
     def _request(self, input_msgs: Iterable[dict]) -> str:
@@ -70,7 +71,7 @@ class OpenAIAdapter(LLMPort):
 
     async def generate(self, conversation: Conversation, state: DebateState) -> str:
         system_prompt = self._render_system_prompt(state)
-        user_message = self._build_user_msg(conversation.topic, conversation.side)
+        user_message = self._build_user_msg(conversation.topic, conversation.stance)
         msgs = [
             {'role': 'system', 'content': system_prompt},
             {'role': 'user', 'content': user_message},

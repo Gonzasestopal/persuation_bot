@@ -2,11 +2,13 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.domain.enums import Stance
+
 
 class Conversation(BaseModel):
     id: int
     topic: str
-    side: str
+    stance: Stance
     expires_at: datetime
 
 

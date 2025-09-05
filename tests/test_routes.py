@@ -3,7 +3,9 @@ import time
 
 import pytest
 
-from app.factories import get_service
+from app.adapters.llm.constants import Provider
+from app.infra.llm import reset_llm_singleton_cache
+from app.infra.service import get_service
 from app.main import app
 from app.settings import settings
 
@@ -31,6 +33,9 @@ def test_real_llm_never_changes_stance(
     second_expected_stance,
 ):
     # ---- Turn 1: start conversation ----
+
+    reset_llm_singleton_cache()
+
     r1 = client.post(
         '/messages', json={'conversation_id': None, 'message': start_message}
     )
@@ -153,6 +158,7 @@ def test_returns_500_on_missing_api_key(client, monkeypatch):
         monkeypatch.delenv('ANTHROPIC_API_KEY', raising=False)
         monkeypatch.setattr(settings, 'OPENAI_API_KEY', None, raising=False)
         monkeypatch.setattr(settings, 'ANTHROPIC_API_KEY', None, raising=False)
+        monkeypatch.setattr(settings, 'LLM_PROVIDER', Provider.OPENAI, raising=False)
 
         r = client.post(
             '/messages',

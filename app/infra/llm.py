@@ -43,6 +43,9 @@ def get_llm(
     provider: Optional[str] = None,
     model: Optional[str] = None,
 ):
+    provider = (provider or settings.LLM_PROVIDER.value).lower()
+    model = model or settings.LLM_MODEL
+
     if provider == Provider.ANTHROPIC.value and not settings.ANTHROPIC_API_KEY:
         raise ConfigError('ANTHROPIC_API_KEY is required for provider=anthropic')
 
@@ -71,7 +74,7 @@ def get_llm(
 
     elif provider == Provider.ANTHROPIC.value:
         return AnthropicAdapter(
-            api_key=settings.OPENAI_API_KEY,
+            api_key=settings.ANTHROPIC_API_KEY,
             model=AnthropicModels.CLAUDE_35,
             difficulty=difficulty,
         )
@@ -83,3 +86,7 @@ def get_llm(
 def get_llm_singleton() -> LLMPort:
     # Build once per process
     return get_llm()
+
+
+def reset_llm_singleton_cache():
+    get_llm_singleton.cache_clear()

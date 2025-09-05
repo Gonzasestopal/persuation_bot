@@ -12,9 +12,6 @@ def get_pool(request: Request) -> AsyncConnectionPool:
 
 def get_repo(request: Request) -> PgMessageRepo:
     if settings.USE_INMEMORY_REPO:
-        # Reuse the single instance created in lifespan
-        repo = getattr(request.app.state, 'inmem_repo', None)
-        if repo is None:
-            repo = request.app.state.inmem_repo = InMemoryMessageRepo()
+        return InMemoryMessageRepo()
 
     return PgMessageRepo(pool=request.app.state.dbpool)

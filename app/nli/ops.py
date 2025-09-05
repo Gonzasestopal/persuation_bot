@@ -66,16 +66,6 @@ def has_support_either_direction(
             chosen,
         )
     return (ph_ok or hp_ok), chosen
-    if logger:
-        logger.debug(
-            '[support] p→h %s ok=%s | h→p %s ok=%s chosen=%s',
-            round3(ph),
-            ph_ok,
-            round3(hp),
-            hp_ok,
-            chosen,
-        )
-    return (ph_ok or hp_ok), chosen
 
 
 def max_contra_sentence(nli, premise: str, hypothesis: str) -> float:

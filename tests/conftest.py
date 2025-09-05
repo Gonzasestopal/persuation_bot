@@ -5,8 +5,8 @@ import pytest
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 
-from app.adapters.repositories.memory_debate_store import InMemoryDebateStore
 from app.domain.parser import parse_topic_side
+from app.infra.state_store import InMemoryDebateStore
 
 # Load env first (OPENAI_API_KEY, etc.)
 load_dotenv()
@@ -17,7 +17,7 @@ os.environ.setdefault('DISABLE_DB_POOL', '1')
 
 from app.adapters.llm.openai import OpenAIAdapter  # adjust import if different
 from app.adapters.repositories.memory import InMemoryMessageRepo
-from app.factories import get_service
+from app.infra.service import get_service
 from app.main import app  # import after flags
 from app.services.message_service import MessageService
 from app.settings import settings
@@ -54,5 +54,3 @@ def client():
 
     # Cleanup override (optional)
     app.dependency_overrides.clear()  # Cleanup override (optional)
-    app.dependency_overrides.clear()
-    app.dependency_overrides.clear()

@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.adapters.llm.dummy import DummyLLMAdapter
+from app.domain.concession_policy import DebateState
 from app.domain.models import Conversation, Message
 from app.domain.ports.llm import LLMPort
 
@@ -13,7 +14,8 @@ async def test_llm_interface_can_generate():
     expires_at = datetime.utcnow()
     conv = Conversation(id=1, topic='X', side='con', expires_at=expires_at)
     llm = DummyLLMAdapter()
-    reply = await llm.generate(conversation=conv)
+    state = DebateState(stance='CON')
+    reply = await llm.generate(conversation=conv, state=state)
     assert reply == f'I am a bot that defends {conv.topic} and im side {conv.side}'
 
 
@@ -36,6 +38,7 @@ async def test_llm_interface_can_debate():
     bot_reply = 'Not really, they are not loyal, its their instict to survive.'
     user_message = Message(role='user', message=user_topic)
     bot_message = Message(role='bot', message=bot_reply)
+    state = DebateState(stance='CON')
     llm = DummyLLMAdapter()
-    reply = await llm.debate(messages=[user_message, bot_message])
+    reply = await llm.debate(messages=[user_message, bot_message], state=state)
     assert 'After considering your last 2 messages' in reply

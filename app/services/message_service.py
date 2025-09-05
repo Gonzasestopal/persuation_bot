@@ -7,7 +7,7 @@ from app.domain.ports.debate_store import DebateStorePort
 from app.domain.ports.llm import LLMPort
 from app.domain.ports.message_repo import MessageRepoPort
 from app.services.concession_service import ConcessionService
-from app.utils import parse_language_line
+from app.utils.lang import parse_language_line
 
 
 class MessageService(object):

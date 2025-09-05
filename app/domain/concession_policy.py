@@ -15,6 +15,7 @@ class ConcessionPolicy:
 @dataclass
 class DebateState:
     stance: Stance
+    topic: str
     policy: ConcessionPolicy = field(default_factory=ConcessionPolicy)
     assistant_turns: int = 0
     positive_judgements: int = 0

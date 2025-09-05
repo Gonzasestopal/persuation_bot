@@ -30,14 +30,14 @@ def test_create_then_get_returns_copy(store):
 
 def test_create_existing_raises_value_error(store):
     conv_id = 2
-    store.create(conv_id, stance='con', lang='es')
+    store.create(conv_id, stance='con', lang='es', topic='god exists')
     with pytest.raises(ValueError):
-        store.create(conv_id, stance='con', lang='es')
+        store.create(conv_id, stance='con', lang='es', topic='god exists')
 
 
 def test_get_returns_deep_copy_not_live_reference(store):
     conv_id = 3
-    s1 = store.create(conv_id, stance='pro', lang='es')
+    s1 = store.create(conv_id, stance='pro', lang='es', topic='god exists')
 
     # mutate returned object without saving
     s1.positive_judgements += 1
@@ -51,7 +51,7 @@ def test_get_returns_deep_copy_not_live_reference(store):
 
 def test_save_persists_changes(store):
     conv_id = 4
-    s = store.create(conv_id, stance='pro', lang='es')
+    s = store.create(conv_id, stance='pro', lang='es', topic='god exists')
     s.positive_judgements = 2
     s.assistant_turns = 5
     store.save(conv_id, s)
@@ -63,7 +63,7 @@ def test_save_persists_changes(store):
 
 def test_update_applies_fn_and_returns_copy(store):
     conv_id = 5
-    store.create(conv_id, stance='pro', lang='es')
+    store.create(conv_id, stance='pro', lang='es', topic='god exists')
 
     def bump_and_conclude(st: DebateState):
         st.positive_judgements += 1
@@ -86,7 +86,7 @@ def test_update_missing_raises_keyerror(store):
 
 def test_save_overwrites_existing_state(store):
     conv_id = 6
-    base = store.create(conv_id, stance='pro', lang='es')
+    base = store.create(conv_id, stance='pro', lang='es', topic='god exists')
 
     local = deepcopy(base)
     local.positive_judgements = 7
@@ -103,7 +103,7 @@ def test_save_overwrites_existing_state(store):
 
 def test_copies_are_independent(store):
     conv_id = 7
-    store.create(conv_id, stance='con', lang='es')
+    store.create(conv_id, stance='con', lang='es', topic='god exists')
 
     a = store.get(conv_id)
     b = store.get(conv_id)

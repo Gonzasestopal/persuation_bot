@@ -4,7 +4,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class ScoringConfig:
     # Contradiction thresholds
-    contradiction_threshold: float = 0.65
+    contradiction_threshold: float = 0.60
     strict_contra_threshold: float = 0.85
     contradiction_threshold_soft: float = 0.60
     eps_contra_vs_neu: float = 0.03

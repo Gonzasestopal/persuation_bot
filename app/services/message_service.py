@@ -49,6 +49,7 @@ class MessageService(object):
         state = self.debate_store.create(
             conversation_id=conversation.id,
             stance=stance,
+            topic=conversation.topic,
         )
 
         raw_reply = await self.llm.generate(conversation=conversation, state=state)

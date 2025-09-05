@@ -50,5 +50,3 @@ register_exception_handlers(app)
 @app.get('/', tags=['health'])
 async def healthcheck():
     return {'Welcome to debate BOT': 'Visit /messages to start conversation'}
-    return {'Welcome to debate BOT': 'Visit /messages to start conversation'}
-    return {'Welcome to debate BOT': 'Visit /messages to start conversation'}

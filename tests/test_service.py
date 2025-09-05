@@ -1,3 +1,4 @@
+from copy import deepcopy  # <-- add this import
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, call, create_autospec
@@ -14,6 +15,38 @@ from app.domain.errors import (
 from app.domain.models import Conversation, Message
 from app.services.concession_service import ConcessionService
 from app.services.message_service import MessageService
+
+
+@pytest.fixture
+def state_store():
+    """
+    Minimal debate-state store for tests that call start_conversation.
+    Exposes `create` and `save` (sync), with a tiny in-memory backing.
+    """
+    _mem = {}
+
+    def _create(*, conversation_id: int, stance: str, lang: str = 'en', **_):
+        # Minimal state object with fields your start flow mutates
+        s = SimpleNamespace(
+            stance=stance,
+            lang=lang,
+            lang_locked=False,
+            assistant_turns=0,
+            positive_judgements=0,
+            match_concluded=False,
+        )
+        _mem[conversation_id] = deepcopy(s)
+        return deepcopy(s)
+
+    def _save(*, conversation_id: int, state, **_):
+        _mem[conversation_id] = deepcopy(state)
+
+    store = SimpleNamespace(
+        create=Mock(side_effect=_create),
+        save=Mock(side_effect=_save),
+    )
+    yield store
+    _mem.clear()
 
 
 @pytest.fixture
@@ -145,7 +178,7 @@ async def test_continue_with_empty_message(repo, llm):
 
 
 @pytest.mark.asyncio
-async def test_start_writes_messages_and_returns_window(llm):
+async def test_start_writes_messages_and_returns_window(llm, state_store):
     expires_at = datetime.utcnow()
     conv = Conversation(id=42, topic='X', side='con', expires_at=expires_at)
     user_message = Message(role='user', message='Topic: X, Side: con')
@@ -170,7 +203,6 @@ async def test_start_writes_messages_and_returns_window(llm):
     )
 
     parser = Mock(return_value=('X', 'con'))
-    state_store = {}
     svc = MessageService(parser=parser, repo=repo, llm=llm, state_store=state_store)
 
     out = await svc.start_conversation(
@@ -199,7 +231,7 @@ async def test_start_writes_messages_and_returns_window(llm):
 
 
 @pytest.mark.asyncio
-async def test_continue_conversation_writes_and_returns_window(repo, llm):
+async def test_continue_conversation_writes_and_returns_window(repo, llm, state_store):
     user_message = Message(role='user', message='I firmly believe...')
     bot_message = Message(role='bot', message='OK')
     parser = Mock(side_effect=AssertionError('parser must not be called on continue'))
@@ -207,7 +239,6 @@ async def test_continue_conversation_writes_and_returns_window(repo, llm):
     concession_service.analyze_conversation = AsyncMock(
         return_value='bot msg processing reply'
     )
-    state_store = {}
     svc = MessageService(
         parser=parser,
         repo=repo,
@@ -364,7 +395,10 @@ async def test_start_conversation_calls_llm_and_stores_reply():
     state.match_concluded = False
     state.assistant_turns = 0
     state.lang = 'es'
-    state_store = {42: state}
+    state_store = SimpleNamespace(
+        create=Mock(return_value=state),
+        save=Mock(),
+    )
     repo = SimpleNamespace(
         create_conversation=AsyncMock(return_value=conv),
         get_conversation=AsyncMock(),

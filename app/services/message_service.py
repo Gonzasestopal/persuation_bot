@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.adapters.repositories.memory_debate_store import InMemoryDebateStore
 from app.domain.errors import ConversationExpired, ConversationNotFound
 from app.domain.parser import assert_no_topic_or_side_markers
+from app.domain.ports.debate_store import DebateStorePort
 from app.domain.ports.llm import LLMPort
 from app.domain.ports.message_repo import MessageRepoPort
 from app.services.concession_service import ConcessionService
@@ -17,7 +17,7 @@ class MessageService(object):
         repo: MessageRepoPort,
         concession_service: Optional[ConcessionService] = None,
         llm: Optional[LLMPort] = None,
-        state_store: Optional[InMemoryDebateStore] = None,
+        state_store: Optional[DebateStorePort] = None,
         history_limit=5,
     ):
         self.parser = parser

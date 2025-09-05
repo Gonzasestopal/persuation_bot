@@ -38,7 +38,11 @@ def client():
         temperature=0.3,
     )
 
-    service = MessageService(parser=parse_topic_side, repo=repo, llm=llm)
+    state_store = {}
+
+    service = MessageService(
+        parser=parse_topic_side, repo=repo, llm=llm, state_store=state_store
+    )
 
     # Override FastAPI DI so routes use our service (no DB access)
     app.dependency_overrides[get_service] = lambda: service

@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock, call
+from unittest.mock import AsyncMock, Mock, call, create_autospec
 
 import pytest
 
+from app.domain.concession_policy import DebateState
 from app.domain.errors import (
     ConversationExpired,
     ConversationNotFound,
@@ -169,7 +170,8 @@ async def test_start_writes_messages_and_returns_window(llm):
     )
 
     parser = Mock(return_value=('X', 'con'))
-    svc = MessageService(parser=parser, repo=repo, llm=llm)
+    state_store = {}
+    svc = MessageService(parser=parser, repo=repo, llm=llm, state_store=state_store)
 
     out = await svc.start_conversation(
         topic='X', side='con', message='Topic: X, Side: con'
@@ -205,12 +207,14 @@ async def test_continue_conversation_writes_and_returns_window(repo, llm):
     concession_service.analyze_conversation = AsyncMock(
         return_value='bot msg processing reply'
     )
+    state_store = {}
     svc = MessageService(
         parser=parser,
         repo=repo,
         llm=llm,
         history_limit=5,
         concession_service=concession_service,
+        state_store=state_store,
     )
 
     out = await svc.continue_conversation(
@@ -355,6 +359,12 @@ async def test_continue_conversation_expired(repo, llm):
 async def test_start_conversation_calls_llm_and_stores_reply():
     expires_at = datetime.utcnow()
     conv = Conversation(id=42, topic='X', side='con', expires_at=expires_at)
+    state = create_autospec(DebateState, instance=True)
+    state.stance = 'con'
+    state.match_concluded = False
+    state.assistant_turns = 0
+    state.lang = 'es'
+    state_store = {42: state}
     repo = SimpleNamespace(
         create_conversation=AsyncMock(return_value=conv),
         get_conversation=AsyncMock(),
@@ -380,11 +390,14 @@ async def test_start_conversation_calls_llm_and_stores_reply():
     llm = AsyncMock()
     llm.generate.return_value = 'Hello from LLM'
 
-    svc = MessageService(parser=parser, repo=repo, llm=llm)
+    svc = MessageService(parser=parser, repo=repo, llm=llm, state_store=state_store)
 
     out = await svc.start_conversation('X', 'con', 'Topic: X, Side: con')
 
-    llm.generate.assert_awaited_once_with(conversation=conv)
+    llm.generate.assert_awaited_once_with(
+        conversation=conv,
+        state=state,
+    )
 
     repo.add_message.assert_has_awaits(
         [

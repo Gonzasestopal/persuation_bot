@@ -31,6 +31,14 @@ class OpenAIAdapter(LLMPort):
 
     # ---------- prompt helpers ----------
 
+    @property
+    def pro_system_prompt(self):
+        return self._render_system_prompt(state=DebateState(stance='pro'))
+
+    @property
+    def con_system_prompt(self):
+        return self._render_system_prompt(state=DebateState(stance='con'))
+
     def _render_system_prompt(self, state: DebateState) -> str:
         """
         Build the system prompt using fields from DebateState.
@@ -60,12 +68,8 @@ class OpenAIAdapter(LLMPort):
         )
         return resp.output_text
 
-    # ---------- LLMPort API (backward compatible) ----------
-    async def generate(
-        self, conversation: Conversation, state: Optional[DebateState] = None
-    ) -> str:
+    async def generate(self, conversation: Conversation, state: DebateState) -> str:
         system_prompt = self._render_system_prompt(state)
-        print(state, '***')
         user_message = self._build_user_msg(conversation.topic, conversation.side)
         msgs = [
             {'role': 'system', 'content': system_prompt},
@@ -80,9 +84,7 @@ class OpenAIAdapter(LLMPort):
             for m in messages
         ]
 
-    async def debate(
-        self, messages: List[Message], state: Optional[DebateState] = None
-    ) -> str:
+    async def debate(self, messages: List[Message], state: DebateState) -> str:
         system_prompt = self._render_system_prompt(state)
         mapped = self._map_history(messages)
         input_msgs = [{'role': 'system', 'content': system_prompt}, *mapped]

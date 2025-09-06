@@ -63,6 +63,9 @@ class ConcessionService:
         scoring: Optional[ScoringConfig] = None,
         debate_store: Optional[DebateStorePort] = None,
         policy_config: Optional[ConcessionPolicyConfig] = None,
+        # NEW: optional strength hint feature flags (safe defaults keep tests green)
+        show_strength_hint_to_user: bool = False,
+        hint_via_llm_guidance: bool = False,
     ) -> None:
         self.llm = llm
         self.nli = nli
@@ -72,6 +75,9 @@ class ConcessionService:
         self.policy_config = policy_config or ConcessionPolicyConfig()
         # internal alias maintained for compatibility
         self.policy_cfg = self.policy_config
+        # strength hint flags
+        self.show_strength_hint_to_user = show_strength_hint_to_user
+        self.hint_via_llm_guidance = hint_via_llm_guidance
 
     # ---------------------------------------------------------------------
     # Public API
@@ -80,9 +86,6 @@ class ConcessionService:
     async def analyze_conversation(
         self, messages: List[Message], stance: Stance, conversation_id: int, topic: str
     ) -> str:
-        """
-        Main entry from MessageService.continue_conversation()
-        """
         state = self.debate_store.get(conversation_id) if self.debate_store else None
         if state is None:
             raise RuntimeError(
@@ -105,7 +108,7 @@ class ConcessionService:
             for m in messages
         ]
 
-        # Identify most recent user and a substantive earlier assistant message
+        # Find last user + prior substantive assistant
         user_idx = next(
             (
                 i
@@ -126,7 +129,7 @@ class ConcessionService:
                 None,
             )
 
-        # If we don't have a previous assistant message, just ask LLM to continue.
+        # No prior assistant turn → just continue
         if user_idx is None or bot_idx is None:
             logger.debug('[analyze] no prior assistant turn; skipping graded policy.')
             reply = await self._safe_llm_debate(messages=mapped)
@@ -158,9 +161,15 @@ class ConcessionService:
 
         tier: ConcessionTier = decision['tier']
 
-        state.push_tier(tier, max_keep=max(state.policy.recent_window, 5))
+        # Track recent tiers if supported
+        if hasattr(state, 'push_tier'):
+            try:
+                max_keep = max(getattr(state.policy, 'recent_window', 3), 5)
+                state.push_tier(tier, max_keep=max_keep)  # type: ignore[attr-defined]
+            except Exception:
+                pass
 
-        # Count concessions towards ending: PARTIAL/FULL only (SOFT doesn't)
+        # Count only PARTIAL/FULL as positive judgements
         if tier in (ConcessionTier.PARTIAL, ConcessionTier.FULL):
             state.positive_judgements += 1
 
@@ -171,6 +180,27 @@ class ConcessionService:
             ConcessionTier.PARTIAL: 'partial_concede',
             ConcessionTier.FULL: 'full_concede',
         }[tier]
+
+        # Optional: whisper a one-line meter to the LLM via guidance
+        if getattr(self, 'hint_via_llm_guidance', False):
+            try:
+                _hint = self._format_strength_hint(
+                    score=decision['signal']['contradiction'],
+                    sim=decision['signal']['similarity'],
+                    on_topic=decision['signal']['on_topic'],
+                    cfg=self.policy_cfg,
+                    tier=tier,
+                    gate_reason=decision.get('gate_reason'),
+                )
+                guidance = (
+                    f'{guidance}\n\n'
+                    f'Add a short, neutral meter at the end of your reply in italics, exactly like: _{_hint}_\n'
+                    f'Do not comment on the meter; keep it to one line.'
+                )
+            except Exception:
+                logger.exception(
+                    '[hint] failed to build hint for guidance; continuing without it'
+                )
 
         logger.debug(
             "[steer] cid=%s mode=%s guidance='%s'",
@@ -188,14 +218,31 @@ class ConcessionService:
         )
         reply = sanitize_end_markers(reply)
 
-        # If FULL, conclude immediately
+        # Optional: append the hint for the user
+        if getattr(self, 'show_strength_hint_to_user', False):
+            try:
+                _hint_user = self._format_strength_hint(
+                    score=decision['signal']['contradiction'],
+                    sim=decision['signal']['similarity'],
+                    on_topic=decision['signal']['on_topic'],
+                    cfg=self.policy_cfg,
+                    tier=tier,
+                    gate_reason=decision.get('gate_reason'),
+                )
+                reply = reply.rstrip() + f'\n\n_{_hint_user}_'
+            except Exception:
+                logger.exception(
+                    '[hint] failed to append hint to user; continuing without it'
+                )
+
+        # FULL ends immediately
         if tier == ConcessionTier.FULL:
             logger.info('[end] cid=%s full_concession -> concluding', conversation_id)
             state.match_concluded = True
             self.debate_store.save(conversation_id=conversation_id, state=state)
             return build_verdict(state=state)
 
-        # ---- POST: bookkeeping and possible conclusion via state policy ----
+        # Post bookkeeping
         state.assistant_turns += 1
         self._maybe_finish_and_persist(conversation_id, state)
         return reply.strip()
@@ -205,31 +252,32 @@ class ConcessionService:
     ) -> Dict[str, Any]:
         """
         One-turn graded analysis:
-          - extract best claim vs user
-          - NLI probs + similarity + topic gate
-          - apply policy (EMA/streaks) -> tier
+        - extract best claim vs user
+        - NLI probs + similarity + topic gate
+        - apply policy (EMA/streaks) -> tier
         """
         # 1) pick best claim pair (thesis fallback) and compute NLI + similarity + topic gate
-        best_pair = await self._extract_best_claim_pair(
-            user_msg, bot_msg, thesis
-        )  # (premise, hypothesis)
+        best_pair = await self._extract_best_claim_pair(user_msg, bot_msg, thesis)
         pairwise = await self._nli_probs(best_pair)
-        similarity = await self._similarity(best_pair)  # [0,1]
-        on_topic = await self._topic_gate(user_msg, thesis)  # bool
-
-        logger.debug(
-            "[nli] pair_premise='%s' pair_hyp='%s' probs={contra=%.3f ent=%.3f neu=%.3f} sim=%.3f topic=%s",
-            trunc(best_pair[0], 120),
-            trunc(best_pair[1], 120),
-            pairwise.get('contradiction', 0.0),
-            pairwise.get('entailment', 0.0),
-            pairwise.get('neutral', 0.0),
-            similarity,
-            on_topic,
-        )
+        similarity_raw = await self._similarity(
+            best_pair
+        )  # [0,1] BEFORE quality scaling
+        on_topic = await self._topic_gate(user_msg, thesis)
 
         # 2) graded signal (contradiction-first) + input-quality features
         u_wc = word_count(user_msg)
+        min_wc = getattr(self.policy_cfg, 'min_user_words', 5)
+        # shrink similarity for very short inputs
+        quality = min(1.0, u_wc / max(1, min_wc))
+        similarity = max(0.0, min(1.0, similarity_raw * quality))
+
+        gate_reason = None
+        if u_wc < min_wc:
+            gate_reason = 'short-input'
+        elif not on_topic:
+            gate_reason = 'off-topic'
+
+        # treat very short question-only inputs specially (if you use this)
         is_q_only = user_msg.strip().endswith('?') and u_wc <= getattr(
             self.policy_cfg, 'question_only_wc_max', 6
         )
@@ -243,18 +291,19 @@ class ConcessionService:
         )
 
         logger.debug(
-            '[signal] contra=%.3f ent=%.3f score=%.3f sim=%.3f on_topic=%s',
+            '[signal] contra=%.3f ent=%.3f score=%.3f sim=%.3f on_topic=%s quality=%.2f',
             pairwise.get('contradiction', 0.0),
             pairwise.get('entailment', 0.0),
-            signal.score,
-            signal.similarity,
+            getattr(signal, 'score', pairwise.get('contradiction', 0.0)),
+            similarity,
             on_topic,
+            quality,
         )
 
         # 3) policy decision (updates state with EMA/streaks internally)
         tier = apply_policy(state=state, signal=signal, cfg=self.policy_cfg)
 
-        # 4) structured response for telemetry / UI (optional)
+        # 4) structured response for telemetry / UI
         rationale = {
             ConcessionTier.FULL: 'High, sustained contradiction on-topic. Ending debate.',
             ConcessionTier.PARTIAL: 'Sustained strong contradiction on a sub-claim.',
@@ -268,9 +317,10 @@ class ConcessionService:
             'signal': {
                 'contradiction': round(pairwise.get('contradiction', 0.0), 3),
                 'entailment': round(pairwise.get('entailment', 0.0), 3),
-                'similarity': round(similarity, 3),
+                'similarity': round(similarity, 3),  # quality-adjusted
                 'on_topic': on_topic,
             },
+            'gate_reason': gate_reason,  # <-- NEW
         }
 
     # ---------------------------------------------------------------------
@@ -559,8 +609,8 @@ class ConcessionService:
         agg = agg_max(sc)
         ent = float(agg.get('entailment', 0.0))
         con = float(agg.get('contradiction', 0.0))
-        neu = float(agg.get('neutral', 1.0))
-        return max(ent, con, 1.0 - neu)
+        # STRICTER: don't use (1 - neutral); junk text won't look similar
+        return max(ent, con)
 
     async def _topic_gate(self, user_msg: str, thesis: str) -> bool:
         if not self.nli:
@@ -842,3 +892,58 @@ class ConcessionService:
                 logger.exception('maybe_conclude() raised; ignoring')
         if self.debate_store:
             self.debate_store.save(conversation_id=conversation_id, state=state)
+
+    # ----------------------------- strength hint helpers -----------------------------
+    def _strength_label(self, score: float, cfg: ConcessionPolicyConfig) -> str:
+        """
+        Map contradiction score (0..1) to a human label using your policy thresholds.
+        """
+        try:
+            if score >= cfg.full_contra_min:
+                return 'very strong'
+            if score >= cfg.partial_contra_min:
+                return 'strong'
+            if score >= cfg.soft_contra_min:
+                return 'moderate'
+        except Exception:
+            # If policy config is missing thresholds, default to simple bins
+            pass
+        return 'weak'
+
+    def _stars(self, score: float) -> str:
+        """
+        Quick 0..1 → 0..5 star meter, rounded to nearest integer.
+        """
+        try:
+            n = int(round(max(0.0, min(1.0, float(score))) * 5))
+        except Exception:
+            n = 0
+        n = max(0, min(5, n))
+        return '★' * n + '☆' * (5 - n)
+
+    def _format_strength_hint(
+        self,
+        *,
+        score: float,
+        sim: float,
+        on_topic: bool,
+        cfg,
+        tier=None,
+        gate_reason=None,
+    ) -> str:
+        # use the stricter of the two as the effective signal
+        effective = min(score, sim)
+        label = self._strength_label(effective, cfg)
+        stars = self._stars(effective)
+        topic = '✓' if on_topic else '✗'
+        parts = [
+            f'Signal: {label} {stars}',
+            f'contra={score:.2f}',
+            f'sim={sim:.2f}',
+            f'on-topic {topic}',
+        ]
+        if tier is not None:
+            parts.append(f'decision={getattr(tier, "name", tier)}')
+        if gate_reason:
+            parts.append(f'gate={gate_reason}')
+        return f'[{" | ".join(parts)}]'

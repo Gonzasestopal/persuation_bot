@@ -1,3 +1,5 @@
+import asyncio
+import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -6,6 +8,9 @@ from psycopg_pool import AsyncConnectionPool
 from app.api.errors import register_exception_handlers
 from app.api.routes import router
 from app.settings import settings
+
+if sys.platform.startswith('win'):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 def _pool_is_closed(pool) -> bool:

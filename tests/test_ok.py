@@ -80,7 +80,7 @@ def test_never_conclude_after_five_turns_aligned_CON(client):
     User sends 5 CON-aligned turns → debate should NOT conclude after 5 assistant replies.
     """
     topic = "Dogs are humans' best friend"
-    start = f'Topic: {topic}. Language: EN. Side: CON.'
+    start = f'Topic: {topic}. Side: CON.'
 
     r1 = client.post('/messages', json={'conversation_id': None, 'message': start})
     assert r1.status_code == 201, r1.text
@@ -122,7 +122,7 @@ def test_never_conclude_after_five_turns_aligned_PRO(client):
     User sends 5 PRO-aligned turns → debate should NOT conclude after 5 assistant replies.
     """
     topic = "Dogs are humans' best friend"
-    start = f'Topic: {topic}. Language: EN. Side: PRO.'
+    start = f'Topic: {topic}. Side: PRO.'
 
     r1 = client.post('/messages', json={'conversation_id': None, 'message': start})
     assert r1.status_code == 201, r1.text

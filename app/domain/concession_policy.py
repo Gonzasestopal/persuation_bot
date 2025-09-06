@@ -15,13 +15,24 @@ class ConcessionPolicy:
 @dataclass
 class DebateState:
     stance: Stance
-    topic: str
     lang: str
+    topic: str
     policy: ConcessionPolicy = field(default_factory=ConcessionPolicy)
+
     assistant_turns: int = 0
     positive_judgements: int = 0
     match_concluded: bool = False
     lang_locked: bool = False  # once True, never auto-change
+
+    # NEW: smoothing + streak counters
+    ema_contradiction: float = None
+    ema_similarity: float = None
+    contradiction_streak_partial: int = 0
+    contradiction_streak_full: int = 0
+
+    # optional bookkeeping
+    soft_concessions: int = 0
+    partial_concessions: int = 0
 
     def should_end(self) -> bool:
         return (
@@ -34,3 +45,31 @@ class DebateState:
         if not self.match_concluded and self.should_end():
             self.match_concluded = True
         return self.match_concluded
+
+
+from dataclasses import dataclass
+
+
+@dataclass
+class ConcessionPolicyConfig:
+    # engagement / input-quality gates
+    min_user_words: int = 5
+    question_only_wc_max: int = 6
+
+    # topic/turn gates
+    min_turns_before_any_concession: int = 0
+    require_on_topic: bool = True
+    similarity_min: float = 0.60
+
+    # thresholds (contradiction-first)
+    soft_contra_min: float = 0.60
+    partial_contra_min: float = 0.75
+    full_contra_min: float = 0.90
+
+    # EMA + streaks
+    ema_alpha: float = 0.5
+    ema_soft_min: float = 0.65
+    ema_partial_min: float = 0.78
+    ema_full_min: float = 0.88
+    partial_streak: int = 1
+    full_streak: int = 2

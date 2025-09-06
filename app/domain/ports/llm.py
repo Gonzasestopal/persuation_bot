@@ -15,7 +15,13 @@ class LLMPort(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def debate(self, messages: List[Message], state: DebateState) -> str:
+    async def debate(
+        self,
+        messages: List[Message],
+        state: DebateState,
+        guidance: str = None,
+        responde_mode: str = None,
+    ) -> str:
         """
         Given a conversation history (list of Messages),
         return the assistant's reply as plain text.

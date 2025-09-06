@@ -158,6 +158,8 @@ class ConcessionService:
 
         tier: ConcessionTier = decision['tier']
 
+        state.push_tier(tier, max_keep=max(state.policy.recent_window, 5))
+
         # Count concessions towards ending: PARTIAL/FULL only (SOFT doesn't)
         if tier in (ConcessionTier.PARTIAL, ConcessionTier.FULL):
             state.positive_judgements += 1

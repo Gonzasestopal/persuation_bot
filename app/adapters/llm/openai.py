@@ -120,7 +120,7 @@ class OpenAIAdapter(LLMPort):
         Uses Responses API for consistency with your earlier code.
         """
         resp = self.client.responses.create(
-            model=self.model.value,  # OpenAI enum -> string
+            model=self.model,  # OpenAI enum -> string
             input=list(input_msgs),  # [{'role', 'content'}, ...]
             temperature=self.temperature,
             max_output_tokens=self.max_output_tokens,

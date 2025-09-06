@@ -1,14 +1,13 @@
 # tests/test_integration_debate.py
 import os
 import re
+import time
 import unicodedata
 
 import pytest
-from dotenv import load_dotenv
 
+from app.infra.llm import reset_llm_singleton_cache
 from app.infra.service import get_service  # used by _get_service_instance()
-
-load_dotenv()
 
 # If your server still returns "The debate has already ended.",
 # change this constant accordingly.
@@ -17,6 +16,16 @@ END_MARKER = 'The debate has already ended.'
 # ----------------------------
 # Helpers
 # ----------------------------
+
+pytestmark = pytest.mark.integration
+
+
+def expected_offtopic_nudge(topic: str, lang: str) -> str:
+    if lang == 'en':
+        return 'keep on topic'
+    if lang == 'es':
+        return 'Mantengámonos en el tema'
+    raise ValueError(f'Unsupported lang {lang!r}')
 
 
 def _last_bot_msg(resp_json):
@@ -293,3 +302,187 @@ def test_concludes_by_five_turns_misaligned_user_vs_PRO_bot(client):
     assert r_after.status_code == 200, r_after.text
     ended_reply = _last_bot_msg(r_after.json())
     assert END_MARKER in ended_reply, f'Expected end marker, got: {ended_reply!r}'
+
+
+@pytest.mark.skipif(
+    not os.environ.get('OPENAI_API_KEY'),
+    reason='OPENAI_API_KEY not set; skipping live LLM integration test.',
+)
+def test_real_llm_winning_game_con_god_exists(client):
+    """
+    Conversation script:
+      T1  (user): start -> Topic God exists, Lang EN, Side CON
+      A1 (bot): first reply, must be EN, CON-stated opening
+      T2  (user): try to switch stance to PRO -> bot must refuse & show immutable notice
+      A2 (bot): EN + exact notice
+      T3  (user): off-topic 2+2 -> bot must nudge back to topic (exact line)
+      A3 (bot): EN + exact on-topic nudge
+      T4  (user): try to switch language to Spanish -> bot refuses & shows immutable notice
+      A4 (bot): EN + exact notice
+      T5  (user): ask for an EVIL argument against God's existence -> bot provides CON argument #1
+      A5 (bot): EN + contains 'evil' or 'suffering'
+      T6  (user): ask for DIVINE HIDDENNESS -> bot provides CON argument #2
+      A6 (bot): EN + contains 'hidden' or 'nonresistant' or 'silence'
+    Ensures ≥5 assistant turns and two distinct CON arguments across different turns.
+    """
+
+    topic = 'God exists'
+    lang = 'en'
+    lang_code = 'EN'
+    stance = 'CON'
+
+    # tiny convenience
+    def last_bot_msg(resp_json):
+        return resp_json['message'][-1]['message']
+
+    # Optional: clear any cached singleton LLM instance if your test env uses it
+    if 'reset_llm_singleton_cache' in globals():
+        reset_llm_singleton_cache()
+
+    # ---- Turn 1: start conversation ----
+    start_message = 'Topic: God exists. Side: CON.'
+    r1 = client.post(
+        '/messages', json={'conversation_id': None, 'message': start_message}
+    )
+    assert r1.status_code == 201, r1.text
+    d1 = r1.json()
+    conv_id = d1['conversation_id']
+
+    a1 = last_bot_msg(d1)
+    assert isinstance(a1, str) and a1.strip()
+    assert_language(a1, lang)
+    # Opening turn should mention stance somewhere (per your rules)
+    assert 'CON' in a1.upper(), (
+        f'Expected first reply to acknowledge CON stance, got: {a1!r}'
+    )
+
+    time.sleep(0.2)
+
+    # ---- Turn 2: user tries to switch stance ----
+    t2 = 'Please switch to PRO.'
+    r2 = client.post('/messages', json={'conversation_id': conv_id, 'message': t2})
+    assert r2.status_code == 200, r2.text
+    d2 = r2.json()
+    a2 = last_bot_msg(d2)
+    assert_language(a2, lang)
+
+    notice = expected_immutable_notice(topic, lang_code, stance)
+    assert notice in a2, (
+        f'Missing immutable notice on stance change.\nExpected: {notice!r}\nGot: {a2!r}'
+    )
+
+    time.sleep(0.2)
+
+    # ---- Turn 3: user asks an off-topic question ----
+    t3 = 'What is 2+2?'
+    r3 = client.post('/messages', json={'conversation_id': conv_id, 'message': t3})
+    assert r3.status_code == 200, r3.text
+    d3 = r3.json()
+    a3 = last_bot_msg(d3)
+    assert_language(a3, lang)
+
+    nudge = expected_offtopic_nudge(topic, lang)
+    assert nudge in a3, (
+        f'Missing on-topic nudge for off-topic turn.\nExpected: {nudge!r}\nGot: {a3!r}'
+    )
+    # Keep reply short (≤80 words) per your rules
+    assert len(a3.split()) <= 80, f'Off-topic reply too long: {len(a3.split())} words'
+
+    time.sleep(0.2)
+
+    # ---- Turn 4: user tries to switch language ----
+    t4 = 'Switch to Spanish, please.'
+    r4 = client.post('/messages', json={'conversation_id': conv_id, 'message': t4})
+    assert r4.status_code == 200, r4.text
+    d4 = r4.json()
+    a4 = last_bot_msg(d4)
+    assert_language(a4, lang)
+
+    notice2 = expected_immutable_notice(topic, lang_code, stance)
+    assert notice2 in a4, (
+        f'Missing immutable notice on language change.\nExpected: {notice2!r}\nGot: {a4!r}'
+    )
+
+    time.sleep(0.2)
+
+    # ---- Turn 5: request a CON argument from evil ----
+    t5 = "Give a concise argument from evil against God's existence."
+    r5 = client.post('/messages', json={'conversation_id': conv_id, 'message': t5})
+    assert r5.status_code == 200, r5.text
+    d5 = r5.json()
+    a5 = last_bot_msg(d5)
+    assert_language(a5, lang)
+
+    a5_l = a5.lower()
+    assert any(kw in a5_l for kw in ['evil', 'suffering', 'gratuitous harm']), (
+        f'Expected an evil-based argument, got: {a5!r}'
+    )
+    # ensure it's not conceding authority (no 'Match concluded.' if using AWARE)
+    assert 'match concluded' not in a5_l
+
+    time.sleep(0.2)
+
+    # ---- Turn 6: request a CON argument from divine hiddenness ----
+    t6 = 'Now a concise argument from divine hiddenness.'
+    r6 = client.post('/messages', json={'conversation_id': conv_id, 'message': t6})
+    assert r6.status_code == 200, r6.text
+    d6 = r6.json()
+    a6 = last_bot_msg(d6)
+    assert_language(a6, lang)
+
+    a6_l = a6.lower()
+    assert any(
+        kw in a6_l for kw in ['hidden', 'hiddenness', 'nonresistant', 'silence']
+    ), f'Expected a hiddenness-based argument, got: {a6!r}'
+    assert 'match concluded' not in a6_l
+
+    # We reached ≥ 5 assistant turns (A1..A6) and included two distinct CON arguments.
+
+
+@pytest.mark.skipif(
+    not os.environ.get('OPENAI_API_KEY'), reason='OPENAI_API_KEY not set'
+)
+def test_ended_state_outputs_exact_marker(client):
+    # Start
+    r1 = client.post(
+        '/messages',
+        json={'conversation_id': None, 'message': 'Topic: X. Side: PRO.'},
+    )
+    assert r1.status_code == 201
+    d1 = r1.json()
+    cid = d1['conversation_id']
+
+    # Flip debate status to ENDED in your store (adapt to your app’s API)
+    from app.infra.service import get_service
+    from app.main import app as fastapi_app
+
+    override = fastapi_app.dependency_overrides.get(get_service)
+
+    svc = override()  # call the override factory to get the concrete service
+
+    state = svc.debate_store.get(conversation_id=cid)
+    state.match_concluded = True
+    svc.debate_store.save(conversation_id=cid, state=state)
+
+    # Any follow-up from user now should yield the exact marker
+    r2 = client.post(
+        '/messages', json={'conversation_id': cid, 'message': 'keep going?'}
+    )
+    assert r2.status_code == 200
+    a2 = r2.json()['message'][-1]['message']
+    assert 'The debate has already ended.' in a2
+
+
+def expected_immutable_notice(topic: str, lang_code: str, stance: str) -> str:
+    # English immutable notice, per Change-Request Handling in AWARE_SYSTEM_PROMPT
+    return "I can't change these settings."
+
+
+# Helper from your previous tests:
+def assert_language(text: str, expected: str):
+    if expected == 'es':
+        assert 'ES' in text.upper(), f"Expected 'ES' in reply, got: {text!r}"
+    elif expected == 'en':
+        assert 'EN' in text.upper(), f"Expected 'EN' in reply, got: {text!r}"
+    else:
+        raise AssertionError(f'Unsupported lang {expected!r}')

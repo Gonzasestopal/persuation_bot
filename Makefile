@@ -43,7 +43,7 @@ dev:
 	$(UVICORN) app.main:app --reload --port 8000 --log-config logging.ini
 
 test:
-	python -m pytest --cov=app --cov-report=term-missing
+	python -m pytest -m unit --cov=app --cov-report=term-missing
 
 down:
 ifeq ($(OS),Windows_NT)

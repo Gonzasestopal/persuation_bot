@@ -2,7 +2,10 @@
 import os
 
 import pytest
+from dotenv import load_dotenv
 from fastapi.testclient import TestClient
+
+load_dotenv()
 
 
 # Ensure env flags are set BEFORE importing app.main (so lifespan won't open DB)

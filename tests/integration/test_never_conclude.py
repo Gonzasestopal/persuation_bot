@@ -4,12 +4,10 @@ import re
 import unicodedata
 
 import pytest
-from dotenv import load_dotenv
 
 from app.infra.service import get_service  # used by _get_service_instance()
 
-load_dotenv()
-
+pytestmark = pytest.mark.integration
 # If your server still returns "The debate has already ended.",
 # change this constant accordingly.
 END_MARKER = 'The debate has already ended.'

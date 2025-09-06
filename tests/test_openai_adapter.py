@@ -42,7 +42,7 @@ async def test_adapter_generate_builds_prompt_and_returns_output(monkeypatch):
     adapter = OpenAIAdapter(
         api_key='sk-test', client=client, model='gpt-4o', temperature=0.3
     )
-    state = DebateState(stance='con', topic='god exists')
+    state = DebateState(stance='con', topic='god exists', lang='en')
     conv = Conversation(id=1, topic='X', stance='con', expires_at=expires_at)
     out = await adapter.generate(conversation=conv, state=state)
 
@@ -74,7 +74,7 @@ async def test_adapter_debate_maps_roles_and_respects_history(monkeypatch):
         Message(role='user', message='u2'),
         Message(role='bot', message='b2'),
     ]
-    state = DebateState(stance='con', topic='god exists')
+    state = DebateState(stance='con', topic='god exists', lang='en')
     out = await adapter.debate(messages=msgs, state=state)
     assert out == 'FAKE-OUTPUT'
 

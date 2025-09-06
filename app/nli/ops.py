@@ -74,3 +74,67 @@ def max_contra_sentence(nli, premise: str, hypothesis: str) -> float:
         sc = nli.bidirectional_scores(premise, s)
         best = max(best, float(agg_max(sc).get('contradiction', 0.0)))
     return best
+
+
+def is_contradiction_soft(
+    scores: Dict[str, Dict[str, float]], cfg: ScoringConfig, *, logger=None
+) -> bool:
+    """
+    Softer alternative to is_contradiction_symmetric:
+      HARD: same as strict
+      SOFT: c >= contradiction_threshold_soft
+            and (c - e) >= margin_ec
+            and (
+                 (c - n) >= min_delta_con_neu
+              or (c + cfg.eps_contra_vs_neu) >= n
+              or e <= cfg.eps_ent                  # low-entailment bailout
+            )
+    """
+    agg = agg_max(scores)
+    c = float(agg.get('contradiction', 0.0))
+    e = float(agg.get('entailment', 0.0))
+    n = float(agg.get('neutral', 0.0))
+
+    hard = (
+        (c >= cfg.contradiction_threshold)
+        and (c >= e)
+        and (c + cfg.eps_contra_vs_neu >= n)
+    )
+    soft_core = (c >= cfg.contradiction_threshold_soft) and ((c - e) >= cfg.margin_ec)
+    soft_neu_ok = ((c - n) >= cfg.min_delta_con_neu) or (
+        (c + cfg.eps_contra_vs_neu) >= n
+    )
+    soft_low_ent_bailout = e <= cfg.eps_ent
+
+    ok = hard or (soft_core and (soft_neu_ok or soft_low_ent_bailout))
+    if logger:
+        logger.debug(
+            '[contra_soft] agg=%s -> hard=%s soft_core=%s neu_ok=%s low_ent=%s => %s',
+            round3(agg),
+            hard,
+            soft_core,
+            soft_neu_ok,
+            soft_low_ent_bailout,
+            ok,
+        )
+    return ok
+
+
+def is_contradiction_with_sentence_fallback(
+    nli, premise: str, hypothesis: str, cfg: ScoringConfig, *, logger=None
+) -> bool:
+    """
+    First try soft contradiction on the whole text; if not, accept if any
+    hypothesis sentence shows contradiction >= cfg.sentence_probe_min.
+    """
+    bi = nli.bidirectional_scores(premise, hypothesis)
+    if is_contradiction_soft(bi, cfg, logger=logger):
+        return True
+    m = max_contra_sentence(nli, premise, hypothesis)
+    thr = getattr(cfg, 'sentence_probe_min', 0.28)
+    ok = m >= thr
+    if logger:
+        logger.debug(
+            '[contra_sent_probe] max_sentence_contra=%.3f thr=%.3f -> %s', m, thr, ok
+        )
+    return ok

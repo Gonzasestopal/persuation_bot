@@ -1,51 +1,49 @@
-# tests/conftest.py
+# conftest.py
 import os
 
 import pytest
-from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 
-from app.domain.parser import parse_topic_side
-from app.infra.debate_store import InMemoryDebateStore
 
-# Load env first (OPENAI_API_KEY, etc.)
-load_dotenv()
-
-# IMPORTANT: set flags BEFORE importing app/factories/settings so nothing tries to init a DB
-os.environ.setdefault('USE_INMEMORY_REPO', '1')
-os.environ.setdefault('DISABLE_DB_POOL', '1')
-
-from app.adapters.llm.openai import OpenAIAdapter  # adjust import if different
-from app.adapters.nli.hf_nli import HFNLIProvider
-from app.adapters.repositories.memory import InMemoryMessageRepo
-from app.infra.service import get_service
-from app.main import app  # import after flags
-from app.services.concession_service import ConcessionService
-from app.services.message_service import MessageService
-from app.settings import settings
+# Ensure env flags are set BEFORE importing app.main (so lifespan won't open DB)
+@pytest.fixture(autouse=True, scope='session')
+def _set_global_env():
+    os.environ.setdefault('DISABLE_DB_POOL', 'true')
+    os.environ.setdefault('USE_INMEMORY_REPO', 'true')
+    yield
 
 
-@pytest.fixture(scope='session')
-def client():
+@pytest.fixture()
+def service():
     """
-    Use a single in-memory repo for the whole test session and the REAL LLM.
-    Dependency override guarantees the route won't touch app.state.dbpool.
+    Build a fresh MessageService and dependencies for EACH TEST.
+    This prevents cross-test leakage of debate state and messages.
     """
-    prev = settings.DISABLE_DB_POOL
-    settings.DISABLE_DB_POOL = True
-    # Shared, persistent in-memory repo across requests
+    # Local imports to avoid importing app.main before env is set
+    from app.adapters.llm.dummy import DummyLLMAdapter
+    from app.adapters.llm.openai import OpenAIAdapter
+    from app.adapters.nli.hf_nli import HFNLIProvider
+    from app.adapters.repositories.memory import InMemoryMessageRepo
+    from app.adapters.repositories.memory_debate_store import InMemoryDebateStore
+    from app.domain.parser import (
+        parse_topic_side,
+    )  # adjust if your parser lives elsewhere
+    from app.services.concession_service import ConcessionService
+    from app.services.message_service import MessageService
+    from app.settings import settings
+
     repo = InMemoryMessageRepo()
-
-    # Real LLM adapter (requires OPENAI_API_KEY in env)
-    llm = OpenAIAdapter(
-        api_key=settings.OPENAI_API_KEY,
-        model=settings.LLM_MODEL,
-        temperature=0.3,
-    )
-
+    debate_store = InMemoryDebateStore()
     nli = HFNLIProvider()
 
-    debate_store = InMemoryDebateStore()
+    if OpenAIAdapter and os.environ.get('OPENAI_API_KEY'):
+        llm = OpenAIAdapter(
+            api_key=settings.OPENAI_API_KEY,
+            model=settings.LLM_MODEL,
+            temperature=0.3,
+        )
+    else:
+        llm = DummyLLMAdapter()
 
     concession_service = ConcessionService(
         llm=llm,
@@ -53,7 +51,7 @@ def client():
         debate_store=debate_store,
     )
 
-    service = MessageService(
+    return MessageService(
         parser=parse_topic_side,
         repo=repo,
         llm=llm,
@@ -61,13 +59,34 @@ def client():
         concession_service=concession_service,
     )
 
-    app.dependency_overrides[get_service] = lambda: service
 
+@pytest.fixture()
+def client(service):
+    """
+    A TestClient using a per-test service via FastAPI dependency override.
+    """
+    from app.infra.service import get_service
+    from app.main import app
+
+    app.dependency_overrides[get_service] = lambda: service
     try:
         with TestClient(app) as c:
             yield c
     finally:
-        settings.DISABLE_DB_POOL = prev
+        app.dependency_overrides.clear()
         app.dependency_overrides.clear()
 
-    app.dependency_overrides.clear()
+
+@pytest.fixture(autouse=True)
+def _reset_inmemory_state(service):
+    # Make sure anything the service holds is pristine *within* the test too.
+    if hasattr(service, 'debate_store'):
+        if hasattr(service.debate_store, 'clear_all'):
+            service.debate_store.clear_all()
+        elif hasattr(service.debate_store, 'clear'):
+            service.debate_store.clear()
+    if hasattr(service, 'repo'):
+        if hasattr(service.repo, 'clear_all'):
+            service.repo.clear_all()
+        elif hasattr(service.repo, 'clear'):
+            service.repo.clear()

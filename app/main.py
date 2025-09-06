@@ -37,7 +37,6 @@ async def lifespan(app: FastAPI):
         pool = getattr(app.state, 'dbpool', None)
         if pool is not None:
             await pool.close()
-            await pool.wait_closed()
 
 
 app = FastAPI(lifespan=lifespan)

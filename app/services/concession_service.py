@@ -9,11 +9,10 @@ from app.domain.ports.debate_store import DebateStorePort
 from app.domain.ports.llm import LLMPort
 from app.domain.ports.nli import NLIPort
 from app.domain.verdicts import after_end_message, build_verdict
-from app.nli.ops import (
-    agg_max,
-    has_support_either_direction,
-    is_contradiction_symmetric,
-)
+from app.nli.ops import agg_max  # keep for comparison/logging if you want
+from app.nli.ops import is_contradiction_soft  # <-- NEW
+from app.nli.ops import is_contradiction_with_sentence_fallback  # <-- NEW (optional)
+from app.nli.ops import has_support_either_direction, is_contradiction_symmetric
 from app.utils.text import (
     drop_questions,
     normalize_spaces,
@@ -144,6 +143,7 @@ class ConcessionService:
     ) -> Optional[Dict[str, Any]]:
         if not conversation:
             return None
+
         user_idx = next(
             (
                 i
@@ -175,9 +175,25 @@ class ConcessionService:
         )
         on_topic = self._is_on_topic(thesis_scores)
 
-        thesis_is_contra = is_contradiction_symmetric(
+        # ---- Opposition to the bot's thesis (SOFT + optional sentence fallback)
+        thesis_is_contra = is_contradiction_soft(
             thesis_scores, self.scoring, logger=logger
         )
+        if not thesis_is_contra:
+            try:
+                thesis_is_contra = is_contradiction_with_sentence_fallback(
+                    self.nli,
+                    thesis,
+                    normalize_spaces(user_txt),
+                    self.scoring,
+                    logger=logger,
+                )
+                if thesis_is_contra:
+                    logger.debug('[judge] thesis opposition via sentence_probe')
+            except Exception:
+                # If no NLI or any transient error, just skip the sentence probe
+                pass
+
         thesis_contra_p = agg_max(thesis_scores).get('contradiction', 0.0)
 
         if thesis_is_contra and (
@@ -188,7 +204,7 @@ class ConcessionService:
                 stance,
                 'OPPOSITE',
                 True,
-                'thesis_opposition',
+                'thesis_opposition_soft_soft',
                 pair_scores,
                 thesis_scores,
                 user_txt,
@@ -196,6 +212,11 @@ class ConcessionService:
                 topic,
             )
         else:
+            # ---- Pairwise opposition (SOFT) when on-topic
+            pair_is_contra = on_topic and is_contradiction_soft(
+                pair_scores, self.scoring, logger=logger
+            )
+
             supported, _ = has_support_either_direction(
                 thesis_scores, self.scoring, logger=logger
             )
@@ -211,24 +232,18 @@ class ConcessionService:
                     bot_txt,
                     topic,
                 )
-
-            elif (
-                on_topic
-                and is_contradiction_symmetric(pair_scores, self.scoring, logger=logger)
-                and user_wc >= self.scoring.min_user_words
-            ):
+            elif pair_is_contra and user_wc >= self.scoring.min_user_words:
                 result = self._mk_result(
                     stance,
                     'OPPOSITE',
                     True,
-                    'pairwise_opposition',
+                    'pairwise_opposition_soft',
                     pair_scores,
                     thesis_scores,
                     user_txt,
                     bot_txt,
                     topic,
                 )
-
             elif user_wc < self.scoring.min_user_words:
                 result = self._mk_result(
                     stance,
@@ -241,7 +256,6 @@ class ConcessionService:
                     bot_txt,
                     topic,
                 )
-
             elif not on_topic:
                 result = self._mk_result(
                     stance,

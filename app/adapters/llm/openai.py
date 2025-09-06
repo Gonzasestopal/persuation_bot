@@ -35,13 +35,13 @@ class OpenAIAdapter(LLMPort):
     @property
     def pro_system_prompt(self):
         return self._render_system_prompt(
-            state=DebateState(stance='pro', topic='placeholder')
+            state=DebateState(stance='con', topic='god exists', lang='en')
         )
 
     @property
     def con_system_prompt(self):
         return self._render_system_prompt(
-            state=DebateState(stance='con', topic='placeholder')
+            state=DebateState(stance='con', topic='god exists', lang='en')
         )
 
     def _render_system_prompt(self, state: DebateState) -> str:
@@ -94,4 +94,8 @@ class OpenAIAdapter(LLMPort):
         system_prompt = self._render_system_prompt(state)
         mapped = self._map_history(messages)
         input_msgs = [{'role': 'system', 'content': system_prompt}, *mapped]
+        return self._request(input_msgs)
+        return self._request(input_msgs)
+        return self._request(input_msgs)
+        return self._request(input_msgs)
         return self._request(input_msgs)

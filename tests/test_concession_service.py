@@ -138,7 +138,7 @@ def test_thesis_contradiction_triggers_concession():
     )
     assert out['concession'] is True
     assert out['alignment'] == 'OPPOSITE'
-    assert out['reason'] == 'thesis_opposition'
+    assert out['reason'] == 'thesis_opposition_soft'
 
 
 def test_thesis_support_same_no_concession():
@@ -211,7 +211,7 @@ def test_pairwise_contradiction_fallback():
         conv, Stance.CON, topic='Las redes sociales han mejorado la conexión humana'
     )
     assert out['alignment'] == 'OPPOSITE'
-    assert out['reason'] == 'pairwise_opposition'
+    assert out['reason'] == 'pairwise_opposition_soft'
     assert out['concession'] is True
 
 
@@ -352,7 +352,7 @@ def test_strong_thesis_contradiction_overrides_min_words():
         conv, Stance.CON, topic='Las redes sociales han mejorado la conexión humana'
     )
     assert out['concession'] is True
-    assert out['reason'] == 'thesis_opposition'
+    assert out['reason'] == 'thesis_opposition_soft'
     assert out['alignment'] == 'OPPOSITE'
 
 
@@ -472,7 +472,7 @@ def test_multilingual_thesis_contradiction_spanish_user():
     )
     assert out['alignment'] == 'OPPOSITE'
     assert out['concession'] is True
-    assert out['reason'] == 'thesis_opposition'
+    assert out['reason'] == 'thesis_opposition_soft'
 
 
 def test_multilingual_thesis_contradiction_english_user():
@@ -506,7 +506,7 @@ def test_multilingual_thesis_contradiction_english_user():
     )
     assert out['alignment'] == 'OPPOSITE'
     assert out['concession'] is True
-    assert out['reason'] == 'thesis_opposition'
+    assert out['reason'] == 'thesis_opposition_soft'
 
 
 def test_sentence_splitting_and_max_contra():
@@ -548,8 +548,8 @@ def test_sentence_splitting_and_max_contra():
     # Because the second sentence is strongly contradictory, service should catch it
     assert out['alignment'] == 'OPPOSITE'
     assert out['concession'] is True
-    assert out['reason'] == 'thesis_opposition'
+    assert out['reason'] == 'thesis_opposition_soft'
     # Because the second sentence is strongly contradictory, service should catch it
     assert out['alignment'] == 'OPPOSITE'
     assert out['concession'] is True
-    assert out['reason'] == 'thesis_opposition'
+    assert out['reason'] == 'thesis_opposition_soft'

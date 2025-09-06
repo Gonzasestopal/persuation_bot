@@ -50,15 +50,21 @@ class MessageService(object):
             conversation_id=conversation.id,
             stance=stance,
             topic=conversation.topic,
-            lang=None,
+            lang='auto',
         )
 
         raw_reply = await self.llm.generate(conversation=conversation, state=state)
 
         lang, clean_reply = parse_language_line(raw_reply)
-        state.lang = lang or 'en'
-        state.lang_locked = True
+        if lang:
+            state.lang = lang
+            state.lang_locked = True
+        else:
+            state.lang = 'auto'
+            state.lang_locked = False
+
         state.assistant_turns += 1
+
         self.debate_store.save(conversation_id=conversation.id, state=state)
 
         await self.repo.add_message(

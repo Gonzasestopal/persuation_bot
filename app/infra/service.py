@@ -16,7 +16,13 @@ def get_concession_singleton(
     nli: NLIPort = Depends(get_nli_singleton),
     llm: LLMPort = Depends(get_llm_singleton),
 ) -> ConcessionService:
-    return ConcessionService(llm=llm, debate_store=debate_store, nli=nli)
+    return ConcessionService(
+        llm=llm,
+        debate_store=debate_store,
+        nli=nli,
+        show_strength_hint_to_user=None,
+        hint_via_llm_guidance=True,
+    )
 
 
 def get_service(

@@ -70,14 +70,13 @@ class OpenAIAdapter(LLMPort):
             'ENDED' if getattr(state, 'match_concluded', False) else 'ONGOING'
         )
         turn_index = int(getattr(state, 'assistant_turns', 0) or 0)
-        language = (getattr(state, 'lang', None) or 'en').strip()
         topic = (getattr(state, 'topic', None) or '').strip()
 
         system = AWARE_SYSTEM_PROMPT.format(
             STANCE=stance,
             DEBATE_STATUS=debate_status,
             TURN_INDEX=turn_index,
-            LANGUAGE=language,
+            LANGUAGE=state.lang or 'auto',
             TOPIC=topic,
         )
 
